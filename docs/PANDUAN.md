@@ -2140,7 +2140,7 @@ Jika ada pertanyaan atau menemukan bug:
 
 1. Buat issue di repository
 2. Hubungi tim development
-3. Cek dokumentasi di `CLAUDE.md` dan `README.md`
+3. Cek dokumentasi di `README.md` dan `docs/PANDUAN.md`
 
 ---
 

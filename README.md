@@ -270,7 +270,6 @@ guyub/
 │   └── Dockerfile
 │
 ├── docker-compose.yml
-├── CLAUDE.md                       # AI development memory
 ├── README.md                       # This file
 └── LICENSE
 ```
