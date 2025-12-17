@@ -12,11 +12,22 @@ import {
   X,
   ArrowRight,
   Star,
-  Check,
   Sparkles,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useCallback, memo } from 'react';
+import {
+  ReactFlow,
+  Background,
+  useNodesState,
+  useEdgesState,
+  Handle,
+  Position,
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
 import './index.css';
+
+// Admin URL - change this for production
+const ADMIN_URL = 'http://localhost:3000';
 
 // Animation variants
 const fadeIn = {
@@ -45,26 +56,29 @@ function Navbar() {
           </a>
 
           <div className="hidden md:flex items-center gap-6">
-            <a href="#features" className="text-sm text-stone-500 hover:text-stone-800 transition-colors">
-              Features
+            <a href="#fitur" className="text-sm text-stone-500 hover:text-stone-800 transition-colors">
+              Fitur
             </a>
-            <a href="#how-it-works" className="text-sm text-stone-500 hover:text-stone-800 transition-colors">
-              How It Works
+            <a href="#cara-kerja" className="text-sm text-stone-500 hover:text-stone-800 transition-colors">
+              Cara Kerja
             </a>
-            <a href="#pricing" className="text-sm text-stone-500 hover:text-stone-800 transition-colors">
-              Pricing
+            <a href="#testimoni" className="text-sm text-stone-500 hover:text-stone-800 transition-colors">
+              Testimoni
             </a>
           </div>
 
           <div className="hidden md:flex items-center gap-3">
-            <a href="/admin/login" className="text-sm text-stone-600 hover:text-stone-800 font-medium">
-              Sign In
+            <a
+              href={`${ADMIN_URL}/login`}
+              className="text-sm text-stone-600 hover:text-stone-800 font-medium"
+            >
+              Masuk
             </a>
             <a
-              href="/admin"
+              href={ADMIN_URL}
               className="px-4 py-2 text-sm font-medium text-white bg-stone-900 hover:bg-stone-800 rounded-lg transition-colors"
             >
-              Get Started
+              Mulai Gratis
             </a>
           </div>
 
@@ -84,13 +98,13 @@ function Navbar() {
           className="md:hidden bg-white border-t border-stone-100"
         >
           <div className="px-4 py-3 space-y-1">
-            <a href="#features" className="block py-2 text-sm text-stone-600">Features</a>
-            <a href="#how-it-works" className="block py-2 text-sm text-stone-600">How It Works</a>
-            <a href="#pricing" className="block py-2 text-sm text-stone-600">Pricing</a>
+            <a href="#fitur" className="block py-2 text-sm text-stone-600">Fitur</a>
+            <a href="#cara-kerja" className="block py-2 text-sm text-stone-600">Cara Kerja</a>
+            <a href="#testimoni" className="block py-2 text-sm text-stone-600">Testimoni</a>
             <div className="pt-3 flex flex-col gap-2">
-              <a href="/admin/login" className="py-2 text-sm text-center text-stone-600 font-medium">Sign In</a>
-              <a href="/admin" className="py-2 text-sm text-center bg-stone-900 text-white rounded-lg font-medium">
-                Get Started
+              <a href={`${ADMIN_URL}/login`} className="py-2 text-sm text-center text-stone-600 font-medium">Masuk</a>
+              <a href={ADMIN_URL} className="py-2 text-sm text-center bg-stone-900 text-white rounded-lg font-medium">
+                Mulai Gratis
               </a>
             </div>
           </div>
@@ -112,43 +126,43 @@ function HeroSection() {
               className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-medium text-amber-700 mb-4"
             >
               <Sparkles className="w-3 h-3" />
-              Connecting Families Together
+              Menghubungkan Keluarga Indonesia
             </motion.div>
 
             <motion.h1
               variants={fadeIn}
               className="text-3xl sm:text-4xl font-bold text-stone-900 leading-tight mb-4"
             >
-              Discover Your{' '}
-              <span className="text-amber-600">Family Legacy</span>
+              Bangun Silsilah{' '}
+              <span className="text-amber-600">Keluarga Anda</span>
             </motion.h1>
 
             <motion.p variants={fadeIn} className="text-stone-500 mb-6 max-w-md mx-auto lg:mx-0">
-              Build beautiful family trees, preserve memories, and connect generations.
-              Bring your family history to life with interactive visualizations.
+              Buat pohon keluarga yang indah, abadikan kenangan, dan hubungkan generasi.
+              Wujudkan sejarah keluarga Anda dengan visualisasi interaktif.
             </motion.p>
 
             <motion.div variants={fadeIn} className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
               <a
-                href="/admin"
+                href={ADMIN_URL}
                 className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-stone-900 hover:bg-stone-800 text-white text-sm font-medium rounded-lg transition-colors"
               >
-                Start Your Tree
+                Mulai Sekarang
                 <ChevronRight className="w-4 h-4" />
               </a>
               <a
                 href="#demo"
                 className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white hover:bg-stone-50 text-stone-700 text-sm font-medium rounded-lg border border-stone-200 transition-colors"
               >
-                View Demo
+                Lihat Demo
               </a>
             </motion.div>
 
             <motion.div variants={fadeIn} className="mt-8 grid grid-cols-3 gap-4 max-w-sm mx-auto lg:mx-0">
               {[
-                { number: '50K+', label: 'Families' },
-                { number: '1M+', label: 'Members' },
-                { number: '99%', label: 'Satisfaction' },
+                { number: '10K+', label: 'Keluarga' },
+                { number: '500K+', label: 'Anggota' },
+                { number: '99%', label: 'Kepuasan' },
               ].map((stat) => (
                 <div key={stat.label} className="text-center lg:text-left">
                   <div className="text-xl font-bold text-stone-800">{stat.number}</div>
@@ -172,76 +186,258 @@ function HeroSection() {
   );
 }
 
-// Family Tree Illustration
+// Silhouette avatar component
+const SilhouetteAvatar = ({ gender, size, className }: { gender: 'male' | 'female'; size: number; className?: string }) => {
+  const iconSize = size * 0.5;
+  return (
+    <div
+      className={`flex items-center justify-center ${className}`}
+      style={{ width: size, height: size }}
+    >
+      {gender === 'male' ? (
+        <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="currentColor" className="text-white/90">
+          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+        </svg>
+      ) : (
+        <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="currentColor" className="text-white/90">
+          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+        </svg>
+      )}
+    </div>
+  );
+};
+
+// Custom node component for family members with silhouette
+const FamilyMemberNode = memo(({ data }: { data: { name: string; gender: 'male' | 'female'; bgColor: string; ring: string; highlight?: boolean; size: number; generation: 'grandparent' | 'parent' | 'child' } }) => {
+  return (
+    <div className="flex flex-col items-center">
+      <Handle type="target" position={Position.Top} className="!bg-transparent !border-0 !w-0 !h-0" />
+      <div
+        className={`rounded-full shadow-md ring-2 ${data.ring} ${data.bgColor} ${
+          data.highlight ? '!ring-4 !ring-amber-400 ring-offset-2' : ''
+        }`}
+        style={{ width: data.size, height: data.size }}
+      >
+        <SilhouetteAvatar gender={data.gender} size={data.size} />
+      </div>
+      {data.highlight && (
+        <div className="mt-1 text-center">
+          <div className="text-[10px] font-medium text-amber-600">{data.name}</div>
+          <div className="text-[8px] text-amber-500 font-medium">(Anda)</div>
+        </div>
+      )}
+      <Handle type="source" position={Position.Bottom} className="!bg-transparent !border-0 !w-0 !h-0" />
+      <Handle type="source" position={Position.Left} id="left" className="!bg-transparent !border-0 !w-0 !h-0" />
+      <Handle type="target" position={Position.Right} id="right" className="!bg-transparent !border-0 !w-0 !h-0" />
+    </div>
+  );
+});
+
+const nodeTypes = { familyMember: FamilyMemberNode };
+
+// Family Tree Illustration using React Flow
 function FamilyTreeIllustration() {
-  const members = [
-    { id: 1, name: 'G', x: 200, y: 40, size: 44, highlight: false },
-    { id: 2, name: 'G', x: 280, y: 40, size: 44, highlight: false },
-    { id: 3, name: 'D', x: 140, y: 140, size: 40 },
-    { id: 4, name: 'M', x: 220, y: 140, size: 40 },
-    { id: 5, name: 'U', x: 300, y: 140, size: 40 },
-    { id: 6, name: 'Y', x: 100, y: 240, size: 36, highlight: true },
-    { id: 7, name: 'S', x: 170, y: 240, size: 36 },
-    { id: 8, name: 'B', x: 240, y: 240, size: 36 },
-    { id: 9, name: 'C', x: 310, y: 240, size: 36 },
+  // Node positions with silhouette avatars
+  const initialNodes = [
+    // Grandparents (Row 1) - Gray color
+    {
+      id: 'kakek',
+      type: 'familyMember',
+      position: { x: 160, y: 10 },
+      data: {
+        name: 'Kakek',
+        gender: 'male' as const,
+        bgColor: 'bg-stone-400',
+        ring: 'ring-stone-300',
+        size: 56,
+        generation: 'grandparent' as const
+      },
+      draggable: false,
+    },
+    {
+      id: 'nenek',
+      type: 'familyMember',
+      position: { x: 250, y: 10 },
+      data: {
+        name: 'Nenek',
+        gender: 'female' as const,
+        bgColor: 'bg-stone-400',
+        ring: 'ring-stone-300',
+        size: 56,
+        generation: 'grandparent' as const
+      },
+      draggable: false,
+    },
+    // Parents (Row 2) - Blue color
+    {
+      id: 'dewi',
+      type: 'familyMember',
+      position: { x: 50, y: 120 },
+      data: {
+        name: 'Dewi',
+        gender: 'female' as const,
+        bgColor: 'bg-sky-400',
+        ring: 'ring-sky-300',
+        size: 50,
+        generation: 'parent' as const
+      },
+      draggable: false,
+    },
+    {
+      id: 'made',
+      type: 'familyMember',
+      position: { x: 130, y: 120 },
+      data: {
+        name: 'Made',
+        gender: 'male' as const,
+        bgColor: 'bg-sky-400',
+        ring: 'ring-sky-300',
+        size: 50,
+        generation: 'parent' as const
+      },
+      draggable: false,
+    },
+    {
+      id: 'umar',
+      type: 'familyMember',
+      position: { x: 330, y: 120 },
+      data: {
+        name: 'Umar',
+        gender: 'male' as const,
+        bgColor: 'bg-sky-400',
+        ring: 'ring-sky-300',
+        size: 50,
+        generation: 'parent' as const
+      },
+      draggable: false,
+    },
+    // Children (Row 3) - Green color, except highlighted one
+    {
+      id: 'yudha',
+      type: 'familyMember',
+      position: { x: 20, y: 230 },
+      data: {
+        name: 'Yudha',
+        gender: 'male' as const,
+        bgColor: 'bg-amber-400',
+        ring: 'ring-amber-300',
+        size: 44,
+        generation: 'child' as const,
+        highlight: true
+      },
+      draggable: false,
+    },
+    {
+      id: 'sari',
+      type: 'familyMember',
+      position: { x: 120, y: 230 },
+      data: {
+        name: 'Sari',
+        gender: 'female' as const,
+        bgColor: 'bg-emerald-400',
+        ring: 'ring-emerald-300',
+        size: 44,
+        generation: 'child' as const
+      },
+      draggable: false,
+    },
+    {
+      id: 'bayu',
+      type: 'familyMember',
+      position: { x: 290, y: 230 },
+      data: {
+        name: 'Bayu',
+        gender: 'male' as const,
+        bgColor: 'bg-emerald-400',
+        ring: 'ring-emerald-300',
+        size: 44,
+        generation: 'child' as const
+      },
+      draggable: false,
+    },
+    {
+      id: 'citra',
+      type: 'familyMember',
+      position: { x: 380, y: 230 },
+      data: {
+        name: 'Citra',
+        gender: 'female' as const,
+        bgColor: 'bg-emerald-400',
+        ring: 'ring-emerald-300',
+        size: 44,
+        generation: 'child' as const
+      },
+      draggable: false,
+    },
   ];
 
-  const connections = [
-    { from: 1, to: 3 }, { from: 1, to: 5 }, { from: 2, to: 3 }, { from: 2, to: 5 },
-    { from: 3, to: 6 }, { from: 3, to: 7 }, { from: 4, to: 6 }, { from: 4, to: 7 },
-    { from: 5, to: 8 }, { from: 5, to: 9 },
+  // Edges (connections)
+  const initialEdges = [
+    // Marriage line between Kakek and Nenek
+    { id: 'e-kakek-nenek', source: 'kakek', target: 'nenek', sourceHandle: 'left', targetHandle: 'right', type: 'straight', style: { stroke: '#a8a29e', strokeWidth: 2 } },
+    // From grandparents to Dewi
+    { id: 'e-kakek-dewi', source: 'kakek', target: 'dewi', type: 'smoothstep', style: { stroke: '#a8a29e', strokeWidth: 2 } },
+    // From grandparents to Made
+    { id: 'e-nenek-made', source: 'nenek', target: 'made', type: 'smoothstep', style: { stroke: '#a8a29e', strokeWidth: 2 } },
+    // From grandparents to Umar
+    { id: 'e-nenek-umar', source: 'nenek', target: 'umar', type: 'smoothstep', style: { stroke: '#a8a29e', strokeWidth: 2 } },
+    // Marriage line between Dewi and Made
+    { id: 'e-dewi-made', source: 'dewi', target: 'made', sourceHandle: 'left', targetHandle: 'right', type: 'straight', style: { stroke: '#fda4af', strokeWidth: 2 } },
+    // From Dewi-Made to Yudha
+    { id: 'e-dewi-yudha', source: 'dewi', target: 'yudha', type: 'smoothstep', style: { stroke: '#a8a29e', strokeWidth: 2 } },
+    // From Dewi-Made to Sari
+    { id: 'e-made-sari', source: 'made', target: 'sari', type: 'smoothstep', style: { stroke: '#a8a29e', strokeWidth: 2 } },
+    // From Umar to Bayu
+    { id: 'e-umar-bayu', source: 'umar', target: 'bayu', type: 'smoothstep', style: { stroke: '#a8a29e', strokeWidth: 2 } },
+    // From Umar to Citra
+    { id: 'e-umar-citra', source: 'umar', target: 'citra', type: 'smoothstep', style: { stroke: '#a8a29e', strokeWidth: 2 } },
   ];
+
+  const [nodes] = useNodesState(initialNodes);
+  const [edges] = useEdgesState(initialEdges);
 
   return (
-    <div className="relative w-full h-[340px]">
-      <div className="absolute inset-0 bg-gradient-to-br from-amber-50 to-stone-50 rounded-2xl border border-stone-100 overflow-hidden">
-        <div className="absolute inset-0 pattern-dots opacity-30" />
+    <div className="relative w-full h-[360px]">
+      <div className="absolute inset-0 bg-gradient-to-br from-amber-50/80 to-stone-50 rounded-2xl border border-stone-200 overflow-hidden">
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={nodeTypes}
+          fitView
+          fitViewOptions={{ padding: 0.2 }}
+          panOnDrag={false}
+          zoomOnScroll={false}
+          zoomOnPinch={false}
+          zoomOnDoubleClick={false}
+          preventScrolling={false}
+          nodesDraggable={false}
+          nodesConnectable={false}
+          elementsSelectable={false}
+          proOptions={{ hideAttribution: true }}
+        >
+          <Background color="#d6d3d1" gap={20} size={1} />
+        </ReactFlow>
       </div>
 
-      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 420 340">
-        {connections.map((conn, idx) => {
-          const from = members.find((m) => m.id === conn.from)!;
-          const to = members.find((m) => m.id === conn.to)!;
-          return (
-            <motion.line
-              key={idx}
-              x1={from.x}
-              y1={from.y + from.size / 2}
-              x2={to.x}
-              y2={to.y - to.size / 2}
-              stroke="#d4d4d4"
-              strokeWidth="1.5"
-              initial={{ pathLength: 0 }}
-              animate={{ pathLength: 1 }}
-              transition={{ duration: 0.8, delay: idx * 0.05 }}
-            />
-          );
-        })}
-      </svg>
-
-      {members.map((member, idx) => (
-        <motion.div
-          key={member.id}
-          initial={{ opacity: 0, scale: 0 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.3, delay: 0.2 + idx * 0.05 }}
-          className="absolute flex flex-col items-center cursor-pointer group"
-          style={{ left: member.x - member.size / 2, top: member.y - member.size / 2 }}
-        >
-          <div
-            className={`rounded-full flex items-center justify-center shadow-sm transition-transform group-hover:scale-105 ${
-              member.highlight
-                ? 'bg-amber-500 ring-2 ring-amber-300'
-                : 'bg-white border border-stone-200'
-            }`}
-            style={{ width: member.size, height: member.size }}
-          >
-            <span className={`text-sm font-semibold ${member.highlight ? 'text-white' : 'text-stone-600'}`}>
-              {member.name}
-            </span>
-          </div>
-        </motion.div>
-      ))}
+      {/* Legend */}
+      <div className="absolute bottom-3 right-3 flex items-center gap-3 px-3 py-1.5 bg-white/80 rounded-lg backdrop-blur-sm z-10">
+        <div className="flex items-center gap-1.5 text-[9px] text-stone-500">
+          <div className="w-2.5 h-2.5 rounded-full bg-stone-400" />
+          <span>Kakek/Nenek</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-[9px] text-stone-500">
+          <div className="w-2.5 h-2.5 rounded-full bg-sky-400" />
+          <span>Orang Tua</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-[9px] text-stone-500">
+          <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+          <span>Saudara</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-[9px] text-stone-500">
+          <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+          <span>Anda</span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -251,38 +447,38 @@ function FeaturesSection() {
   const features = [
     {
       icon: TreeDeciduous,
-      title: 'Interactive Trees',
-      description: 'Build visual family trees with drag-and-drop simplicity.',
+      title: 'Pohon Interaktif',
+      description: 'Bangun silsilah keluarga dengan mudah menggunakan fitur drag-and-drop.',
     },
     {
       icon: Users,
-      title: 'Collaborate',
-      description: 'Invite family members to contribute in real-time.',
+      title: 'Kolaborasi',
+      description: 'Undang anggota keluarga untuk berkontribusi secara real-time.',
     },
     {
       icon: Shield,
-      title: 'Privacy First',
-      description: 'Control who sees what with granular permissions.',
+      title: 'Privasi Terjamin',
+      description: 'Kontrol siapa yang dapat melihat data dengan pengaturan privasi.',
     },
     {
       icon: Share2,
-      title: 'Easy Sharing',
-      description: 'Share via secure links or export to PDF.',
+      title: 'Mudah Dibagikan',
+      description: 'Bagikan via link aman atau ekspor ke format PDF.',
     },
     {
       icon: History,
-      title: 'Timeline View',
-      description: 'See your family history as an interactive timeline.',
+      title: 'Tampilan Timeline',
+      description: 'Lihat sejarah keluarga dalam tampilan timeline interaktif.',
     },
     {
       icon: Search,
-      title: 'Smart Search',
-      description: 'Find any family member instantly by any field.',
+      title: 'Pencarian Cerdas',
+      description: 'Temukan anggota keluarga dengan cepat berdasarkan nama atau data lainnya.',
     },
   ];
 
   return (
-    <section id="features" className="py-16 bg-white">
+    <section id="fitur" className="py-16 bg-white">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <motion.div
           initial="hidden"
@@ -292,10 +488,10 @@ function FeaturesSection() {
           className="text-center mb-12"
         >
           <motion.h2 variants={fadeIn} className="text-2xl sm:text-3xl font-bold text-stone-900 mb-3">
-            Everything You Need
+            Semua yang Anda Butuhkan
           </motion.h2>
           <motion.p variants={fadeIn} className="text-stone-500 max-w-lg mx-auto">
-            Powerful features to build, share, and preserve your family history.
+            Fitur lengkap untuk membangun, berbagi, dan melestarikan sejarah keluarga Anda.
           </motion.p>
         </motion.div>
 
@@ -328,14 +524,14 @@ function FeaturesSection() {
 // How It Works
 function HowItWorksSection() {
   const steps = [
-    { step: 1, title: 'Create Account', description: 'Sign up in seconds', icon: Users },
-    { step: 2, title: 'Add Members', description: 'Start with yourself', icon: TreeDeciduous },
-    { step: 3, title: 'Invite Family', description: 'Share access easily', icon: Share2 },
-    { step: 4, title: 'Grow Together', description: 'Watch it flourish', icon: Heart },
+    { step: 1, title: 'Buat Akun', description: 'Daftar dalam hitungan detik', icon: Users },
+    { step: 2, title: 'Tambah Anggota', description: 'Mulai dari diri Anda sendiri', icon: TreeDeciduous },
+    { step: 3, title: 'Undang Keluarga', description: 'Bagikan akses dengan mudah', icon: Share2 },
+    { step: 4, title: 'Tumbuh Bersama', description: 'Lihat pohon keluarga berkembang', icon: Heart },
   ];
 
   return (
-    <section id="how-it-works" className="py-16 bg-stone-50">
+    <section id="cara-kerja" className="py-16 bg-stone-50">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <motion.div
           initial="hidden"
@@ -345,10 +541,10 @@ function HowItWorksSection() {
           className="text-center mb-12"
         >
           <motion.h2 variants={fadeIn} className="text-2xl sm:text-3xl font-bold text-stone-900 mb-3">
-            Get Started in Minutes
+            Mulai dalam Hitungan Menit
           </motion.h2>
           <motion.p variants={fadeIn} className="text-stone-500">
-            Four simple steps to build your family tree.
+            Empat langkah sederhana untuk membangun pohon keluarga Anda.
           </motion.p>
         </motion.div>
 
@@ -379,149 +575,34 @@ function HowItWorksSection() {
   );
 }
 
-// Pricing Section
-function PricingSection() {
-  const plans = [
-    {
-      name: 'Free',
-      price: 'Rp 0',
-      period: 'forever',
-      description: 'Perfect for getting started',
-      features: ['Up to 50 members', '1 family tree', 'Basic views', 'Community support'],
-      cta: 'Start Free',
-      popular: false,
-    },
-    {
-      name: 'Family',
-      price: 'Rp 99K',
-      period: '/month',
-      description: 'Best for growing families',
-      features: ['Unlimited members', 'Up to 5 trees', 'Advanced views', 'Photo galleries', 'Export PDF', 'Priority support'],
-      cta: 'Get Started',
-      popular: true,
-    },
-    {
-      name: 'Clan',
-      price: 'Rp 249K',
-      period: '/month',
-      description: 'For large extended families',
-      features: ['Everything in Family', 'Unlimited trees', 'Custom branding', 'DNA integration', 'API access', 'Dedicated support'],
-      cta: 'Contact Us',
-      popular: false,
-    },
-  ];
-
-  return (
-    <section id="pricing" className="py-16 bg-white">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6">
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={stagger}
-          className="text-center mb-12"
-        >
-          <motion.h2 variants={fadeIn} className="text-2xl sm:text-3xl font-bold text-stone-900 mb-3">
-            Simple Pricing
-          </motion.h2>
-          <motion.p variants={fadeIn} className="text-stone-500">
-            Choose the perfect plan. No hidden fees.
-          </motion.p>
-        </motion.div>
-
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={stagger}
-          className="grid md:grid-cols-3 gap-6"
-        >
-          {plans.map((plan) => (
-            <motion.div
-              key={plan.name}
-              variants={fadeIn}
-              className={`relative p-6 rounded-xl ${
-                plan.popular
-                  ? 'bg-stone-900 text-white ring-2 ring-amber-500'
-                  : 'bg-stone-50 border border-stone-100'
-              }`}
-            >
-              {plan.popular && (
-                <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 bg-amber-500 text-[10px] font-semibold text-white rounded-full uppercase tracking-wide">
-                  Popular
-                </div>
-              )}
-              <div className="mb-4">
-                <h3 className={`text-sm font-semibold ${plan.popular ? 'text-white' : 'text-stone-800'}`}>
-                  {plan.name}
-                </h3>
-                <div className="mt-1 flex items-baseline gap-1">
-                  <span className={`text-2xl font-bold ${plan.popular ? 'text-white' : 'text-stone-900'}`}>
-                    {plan.price}
-                  </span>
-                  <span className={`text-xs ${plan.popular ? 'text-stone-400' : 'text-stone-500'}`}>
-                    {plan.period}
-                  </span>
-                </div>
-                <p className={`mt-1 text-xs ${plan.popular ? 'text-stone-400' : 'text-stone-500'}`}>
-                  {plan.description}
-                </p>
-              </div>
-
-              <ul className="space-y-2 mb-5">
-                {plan.features.map((feature) => (
-                  <li key={feature} className="flex items-center gap-2 text-xs">
-                    <Check className={`w-3.5 h-3.5 ${plan.popular ? 'text-amber-400' : 'text-amber-500'}`} />
-                    <span className={plan.popular ? 'text-stone-300' : 'text-stone-600'}>{feature}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <button
-                className={`w-full py-2 text-sm font-medium rounded-lg transition-colors ${
-                  plan.popular
-                    ? 'bg-white text-stone-900 hover:bg-stone-100'
-                    : 'bg-stone-900 text-white hover:bg-stone-800'
-                }`}
-              >
-                {plan.cta}
-              </button>
-            </motion.div>
-          ))}
-        </motion.div>
-      </div>
-    </section>
-  );
-}
-
 // Testimonials
 function TestimonialsSection() {
   const testimonials = [
     {
-      name: 'Ibu Kartini',
-      role: 'Family Historian',
-      avatar: 'K',
-      content: 'Guyub transformed how our family connects. My grandchildren can now see their heritage come alive.',
+      name: 'Ibu Kartini Wijaya',
+      role: 'Ibu Rumah Tangga, Jakarta',
+      image: 'https://images.unsplash.com/photo-1594744803329-e58b31de8bf5?w=150&h=150&fit=crop&crop=face',
+      content: 'Guyub mengubah cara keluarga kami terhubung. Cucu-cucu saya sekarang bisa melihat warisan leluhur dengan mudah.',
       rating: 5,
     },
     {
-      name: 'Pak Bambang',
-      role: 'Retired Teacher',
-      avatar: 'B',
-      content: 'I spent years collecting records in notebooks. Guyub helped me digitize everything beautifully.',
+      name: 'Pak Bambang Sutrisno',
+      role: 'Pensiunan Guru, Yogyakarta',
+      image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
+      content: 'Selama bertahun-tahun saya mengumpulkan catatan di buku. Guyub membantu saya mendigitalkan semuanya dengan indah.',
       rating: 5,
     },
     {
       name: 'Dewi Lestari',
-      role: 'Professional',
-      avatar: 'D',
-      content: "With a large Javanese family, keeping track was impossible. Guyub made it easy and even fun!",
+      role: 'Profesional, Surabaya',
+      image: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&h=150&fit=crop&crop=face',
+      content: 'Dengan keluarga besar Jawa, mencatat silsilah itu mustahil. Guyub membuat semuanya mudah dan bahkan menyenangkan!',
       rating: 5,
     },
   ];
 
   return (
-    <section id="testimonials" className="py-16 bg-stone-50">
+    <section id="testimoni" className="py-16 bg-white">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <motion.div
           initial="hidden"
@@ -531,10 +612,10 @@ function TestimonialsSection() {
           className="text-center mb-12"
         >
           <motion.h2 variants={fadeIn} className="text-2xl sm:text-3xl font-bold text-stone-900 mb-3">
-            Loved by Families
+            Dipercaya Ribuan Keluarga
           </motion.h2>
           <motion.p variants={fadeIn} className="text-stone-500">
-            See what families are saying about Guyub.
+            Lihat apa kata keluarga-keluarga tentang Guyub.
           </motion.p>
         </motion.div>
 
@@ -549,7 +630,7 @@ function TestimonialsSection() {
             <motion.div
               key={t.name}
               variants={fadeIn}
-              className="p-5 rounded-xl bg-white border border-stone-100"
+              className="p-5 rounded-xl bg-stone-50 border border-stone-100"
             >
               <div className="flex gap-0.5 mb-3">
                 {[...Array(t.rating)].map((_, i) => (
@@ -557,10 +638,12 @@ function TestimonialsSection() {
                 ))}
               </div>
               <p className="text-xs text-stone-600 mb-4 leading-relaxed">"{t.content}"</p>
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 text-xs font-semibold">
-                  {t.avatar}
-                </div>
+              <div className="flex items-center gap-3">
+                <img
+                  src={t.image}
+                  alt={t.name}
+                  className="w-10 h-10 rounded-full object-cover"
+                />
                 <div>
                   <div className="text-xs font-semibold text-stone-800">{t.name}</div>
                   <div className="text-[10px] text-stone-500">{t.role}</div>
@@ -581,24 +664,24 @@ function CTASection() {
       <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}>
           <motion.h2 variants={fadeIn} className="text-xl sm:text-2xl font-bold text-white mb-3">
-            Ready to Start Your Family Journey?
+            Siap Memulai Perjalanan Keluarga Anda?
           </motion.h2>
           <motion.p variants={fadeIn} className="text-sm text-stone-400 mb-6 max-w-md mx-auto">
-            Join thousands of families preserving their legacy. Start free, no credit card required.
+            Bergabunglah dengan ribuan keluarga yang melestarikan warisan mereka. Mulai gratis, tanpa kartu kredit.
           </motion.p>
           <motion.div variants={fadeIn} className="flex flex-col sm:flex-row gap-3 justify-center">
             <a
-              href="/admin"
+              href={ADMIN_URL}
               className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-stone-900 text-sm font-medium rounded-lg hover:bg-stone-100 transition-colors"
             >
-              Get Started Free
+              Mulai Gratis Sekarang
               <ArrowRight className="w-4 h-4" />
             </a>
             <a
               href="#demo"
               className="inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-stone-400 hover:text-white border border-stone-700 hover:border-stone-600 rounded-lg transition-colors"
             >
-              Watch Demo
+              Lihat Demo
             </a>
           </motion.div>
         </motion.div>
@@ -621,32 +704,32 @@ function Footer() {
               <span className="text-sm font-semibold text-white">Guyub</span>
             </div>
             <p className="text-xs text-stone-500 leading-relaxed">
-              Connecting families, preserving legacies, bringing generations together.
+              Menghubungkan keluarga, melestarikan warisan, menyatukan generasi.
             </p>
           </div>
 
           <div>
-            <h4 className="text-xs font-semibold text-white uppercase tracking-wider mb-3">Product</h4>
+            <h4 className="text-xs font-semibold text-white uppercase tracking-wider mb-3">Produk</h4>
             <ul className="space-y-2">
-              {['Features', 'Pricing', 'Security'].map((item) => (
+              {['Fitur', 'Keamanan', 'Bantuan'].map((item) => (
                 <li key={item}><a href="#" className="text-xs hover:text-white transition-colors">{item}</a></li>
               ))}
             </ul>
           </div>
 
           <div>
-            <h4 className="text-xs font-semibold text-white uppercase tracking-wider mb-3">Company</h4>
+            <h4 className="text-xs font-semibold text-white uppercase tracking-wider mb-3">Perusahaan</h4>
             <ul className="space-y-2">
-              {['About', 'Blog', 'Careers'].map((item) => (
+              {['Tentang Kami', 'Blog', 'Karir'].map((item) => (
                 <li key={item}><a href="#" className="text-xs hover:text-white transition-colors">{item}</a></li>
               ))}
             </ul>
           </div>
 
           <div>
-            <h4 className="text-xs font-semibold text-white uppercase tracking-wider mb-3">Support</h4>
+            <h4 className="text-xs font-semibold text-white uppercase tracking-wider mb-3">Dukungan</h4>
             <ul className="space-y-2">
-              {['Help Center', 'Privacy', 'Terms'].map((item) => (
+              {['Pusat Bantuan', 'Privasi', 'Syarat & Ketentuan'].map((item) => (
                 <li key={item}><a href="#" className="text-xs hover:text-white transition-colors">{item}</a></li>
               ))}
             </ul>
@@ -655,7 +738,7 @@ function Footer() {
 
         <div className="border-t border-stone-800 pt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
           <p className="text-[10px] text-stone-600">
-            © {new Date().getFullYear()} Guyub. All rights reserved.
+            © {new Date().getFullYear()} Guyub. Hak cipta dilindungi.
           </p>
           <div className="flex gap-4">
             {['twitter', 'github', 'instagram'].map((social) => (
@@ -680,7 +763,6 @@ function App() {
         <HeroSection />
         <FeaturesSection />
         <HowItWorksSection />
-        <PricingSection />
         <TestimonialsSection />
         <CTASection />
       </main>

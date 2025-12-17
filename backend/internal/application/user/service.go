@@ -2,9 +2,12 @@ package user
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"strconv"
 	"strings"
 
+	"guyub/internal/domain/asset"
 	"guyub/internal/domain/audit"
 	"guyub/internal/domain/user"
 	infraAuth "guyub/internal/infrastructure/auth"
@@ -22,17 +25,23 @@ var (
 type Service struct {
 	userRepo        user.Repository
 	auditRepo       audit.Repository
+	assetRepo       asset.Repository
+	storageService  asset.StorageService
 	passwordService *infraAuth.PasswordService
 }
 
 func NewService(
 	userRepo user.Repository,
 	auditRepo audit.Repository,
+	assetRepo asset.Repository,
+	storageService asset.StorageService,
 	passwordService *infraAuth.PasswordService,
 ) *Service {
 	return &Service{
 		userRepo:        userRepo,
 		auditRepo:       auditRepo,
+		assetRepo:       assetRepo,
+		storageService:  storageService,
 		passwordService: passwordService,
 	}
 }
@@ -63,6 +72,7 @@ type UserResponse struct {
 	Name        string       `json:"name"`
 	Email       string       `json:"email"`
 	Phone       *string      `json:"phone,omitempty"`
+	AvatarURL   *string      `json:"avatar_url,omitempty"`
 	Status      StatusValue  `json:"status"`
 	Type        TypeValue    `json:"type"`
 	LastLoginAt *string      `json:"last_login_at,omitempty"`
@@ -178,7 +188,8 @@ func (s *Service) Create(ctx context.Context, req *CreateUserRequest, createdBy 
 	// Audit log
 	s.logAudit(ctx, createdBy, audit.EventCreated, "User", &u.ID, nil, u)
 
-	return s.toResponse(u), nil
+	avatarURL := s.getAvatarURL(ctx, u.ID)
+	return s.toResponse(u, avatarURL), nil
 }
 
 func (s *Service) Update(ctx context.Context, id uint64, req *UpdateUserRequest, updatedBy uint64) (*UserResponse, error) {
@@ -249,7 +260,8 @@ func (s *Service) Update(ctx context.Context, id uint64, req *UpdateUserRequest,
 	// Audit log
 	s.logAudit(ctx, updatedBy, audit.EventUpdated, "User", &u.ID, &oldUser, u)
 
-	return s.toResponse(u), nil
+	avatarURL := s.getAvatarURL(ctx, u.ID)
+	return s.toResponse(u, avatarURL), nil
 }
 
 func (s *Service) Delete(ctx context.Context, id uint64, deletedBy uint64) error {
@@ -317,7 +329,8 @@ func (s *Service) FindByID(ctx context.Context, id uint64) (*UserResponse, error
 	if u == nil {
 		return nil, ErrUserNotFound
 	}
-	return s.toResponse(u), nil
+	avatarURL := s.getAvatarURL(ctx, id)
+	return s.toResponse(u, avatarURL), nil
 }
 
 func (s *Service) List(ctx context.Context, req *ListUsersRequest) (*ListUsersResponse, error) {
@@ -363,10 +376,21 @@ func (s *Service) List(ctx context.Context, req *ListUsersRequest) (*ListUsersRe
 		return nil, err
 	}
 
+	// Batch fetch avatar URLs for all users
+	userIDs := make([]uint64, len(users))
+	for i, u := range users {
+		userIDs[i] = u.ID
+	}
+	avatarURLs := s.getAvatarURLs(ctx, userIDs)
+
 	// Convert to response
 	data := make([]*UserResponse, len(users))
 	for i, u := range users {
-		data[i] = s.toResponse(u)
+		var avatarURL *string
+		if url, ok := avatarURLs[u.ID]; ok {
+			avatarURL = &url
+		}
+		data[i] = s.toResponse(u, avatarURL)
 	}
 
 	// Calculate pagination meta
@@ -430,12 +454,13 @@ func (s *Service) BulkAssignRole(ctx context.Context, req *BulkAssignRoleRequest
 }
 
 // Helper methods
-func (s *Service) toResponse(u *user.User) *UserResponse {
+func (s *Service) toResponse(u *user.User, avatarURL *string) *UserResponse {
 	resp := &UserResponse{
-		ID:    u.ID,
-		Name:  u.Name,
-		Email: u.Email,
-		Phone: u.Phone,
+		ID:        u.ID,
+		Name:      u.Name,
+		Email:     u.Email,
+		Phone:     u.Phone,
+		AvatarURL: avatarURL,
 		Status: StatusValue{
 			Value: u.Status.String(),
 			Label: u.Status.Label(),
@@ -470,7 +495,81 @@ func (s *Service) toResponse(u *user.User) *UserResponse {
 	return resp
 }
 
+// getAvatarURL fetches the avatar URL for a user
+func (s *Service) getAvatarURL(ctx context.Context, userID uint64) *string {
+	if s.assetRepo == nil || s.storageService == nil {
+		return nil
+	}
+	refID := strconv.FormatUint(userID, 10)
+	avatar, err := s.assetRepo.FindLatestByRefIDAndKind(ctx, refID, asset.KindUserAvatar)
+	if err != nil {
+		return nil
+	}
+	if avatar == nil {
+		return nil
+	}
+	url := s.storageService.URL(avatar.StoragePath)
+	return &url
+}
+
+// getAvatarURLs fetches avatar URLs for multiple users (batch)
+func (s *Service) getAvatarURLs(ctx context.Context, userIDs []uint64) map[uint64]string {
+	result := make(map[uint64]string)
+	if s.assetRepo == nil || s.storageService == nil {
+		return result
+	}
+	for _, id := range userIDs {
+		avatar, err := s.assetRepo.FindLatestByRefIDAndKind(ctx, strconv.FormatUint(id, 10), asset.KindUserAvatar)
+		if err == nil && avatar != nil {
+			result[id] = s.storageService.URL(avatar.StoragePath)
+		}
+	}
+	return result
+}
+
 func (s *Service) logAudit(ctx context.Context, userID uint64, event audit.Event, entityType string, entityID *uint64, oldValues, newValues interface{}) {
-	// Implementation would serialize old/new values to JSON and create audit log
-	// Simplified for brevity
+	log := &audit.Log{
+		UserID:        &userID,
+		Event:         event,
+		AuditableType: entityType,
+		AuditableID:   entityID,
+		SecurityLevel: audit.GetSecurityLevel(event, entityType),
+	}
+
+	// Convert old values to JSON
+	if oldValues != nil {
+		if data, err := toAuditJSON(oldValues); err == nil {
+			log.OldValues = data
+		}
+	}
+
+	// Convert new values to JSON
+	if newValues != nil {
+		if data, err := toAuditJSON(newValues); err == nil {
+			log.NewValues = data
+		}
+	}
+
+	// Create audit log (async to not block the request)
+	go func() {
+		_ = s.auditRepo.Create(context.Background(), log)
+	}()
+}
+
+// toAuditJSON converts a value to JSON for audit logging, filtering sensitive fields
+func toAuditJSON(v interface{}) ([]byte, error) {
+	// First marshal to get a map
+	data, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+
+	var m map[string]interface{}
+	if err := json.Unmarshal(data, &m); err != nil {
+		return data, nil // Return original if not a map
+	}
+
+	// Filter sensitive fields
+	filtered := audit.FilterSensitiveData(m)
+	return json.Marshal(filtered)
 }

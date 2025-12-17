@@ -69,6 +69,12 @@ func main() {
 		logger.Fatalf("Failed to seed master data: %v", err)
 	}
 
+	// Seed sample users
+	logger.Info("Seeding sample users...")
+	if err := seedSampleUsers(ctx, db); err != nil {
+		logger.Fatalf("Failed to seed sample users: %v", err)
+	}
+
 	logger.Info("Seeding completed successfully!")
 }
 
@@ -364,6 +370,88 @@ func seedMasterData(ctx context.Context, db *gorm.DB) error {
 
 		for i, v := range religionType.Values {
 			db.Exec("INSERT INTO app_master_values (type_id, code, name, is_active, sort_order) VALUES (?, ?, ?, 1, ?)", religion.ID, v.Code, v.Name, i+1)
+		}
+	}
+
+	return nil
+}
+
+func seedSampleUsers(ctx context.Context, db *gorm.DB) error {
+	// Hash password
+	passwordService := infraAuth.NewPasswordService()
+	hashedPassword, err := passwordService.Hash("Password@123")
+	if err != nil {
+		return err
+	}
+
+	// Get roles
+	var adminRole, managerRole, agentRole role.Role
+	if err := db.Where("name = ?", "admin").First(&adminRole).Error; err != nil {
+		logger.Errorf("Failed to find admin role: %v", err)
+	} else {
+		logger.Infof("Found admin role with ID: %d", adminRole.ID)
+	}
+	if err := db.Where("name = ?", "manager").First(&managerRole).Error; err != nil {
+		logger.Errorf("Failed to find manager role: %v", err)
+	} else {
+		logger.Infof("Found manager role with ID: %d", managerRole.ID)
+	}
+	if err := db.Where("name = ?", "agent").First(&agentRole).Error; err != nil {
+		logger.Errorf("Failed to find agent role: %v", err)
+	} else {
+		logger.Infof("Found agent role with ID: %d", agentRole.ID)
+	}
+
+	sampleUsers := []struct {
+		Name   string
+		Email  string
+		Type   user.Type
+		Status user.Status
+		RoleID uint64
+	}{
+		{Name: "John Admin", Email: "john@guyub.id", Type: user.TypeInternal, Status: user.StatusActive, RoleID: adminRole.ID},
+		{Name: "Jane Manager", Email: "jane@guyub.id", Type: user.TypeInternal, Status: user.StatusActive, RoleID: managerRole.ID},
+		{Name: "Bob Agent", Email: "bob@guyub.id", Type: user.TypeInternal, Status: user.StatusActive, RoleID: agentRole.ID},
+		{Name: "Alice Agent", Email: "alice@guyub.id", Type: user.TypeInternal, Status: user.StatusActive, RoleID: agentRole.ID},
+		{Name: "Charlie Member", Email: "charlie@gmail.com", Type: user.TypeCustomer, Status: user.StatusActive, RoleID: agentRole.ID},
+		{Name: "Diana Member", Email: "diana@gmail.com", Type: user.TypeCustomer, Status: user.StatusActive, RoleID: agentRole.ID},
+		{Name: "Eve Suspended", Email: "eve@gmail.com", Type: user.TypeCustomer, Status: user.StatusSuspended, RoleID: agentRole.ID},
+		{Name: "Frank Inactive", Email: "frank@gmail.com", Type: user.TypeCustomer, Status: user.StatusInactive, RoleID: agentRole.ID},
+	}
+
+	for _, u := range sampleUsers {
+		logger.Infof("Checking user: %s", u.Email)
+		var existingUser user.User
+		if err := db.Where("email = ?", u.Email).First(&existingUser).Error; err == nil {
+			logger.Infof("User %s already exists, skipping", u.Email)
+			continue // User already exists
+		}
+
+		logger.Infof("Creating user: %s with RoleID: %d", u.Email, u.RoleID)
+		newUser := user.User{
+			Name:     u.Name,
+			Email:    u.Email,
+			Password: hashedPassword,
+			Type:     u.Type,
+			Status:   u.Status,
+		}
+
+		if err := db.Create(&newUser).Error; err != nil {
+			logger.Errorf("Failed to create user %s: %v", u.Email, err)
+			continue
+		}
+		logger.Infof("Created user %s with ID: %d", u.Email, newUser.ID)
+
+		// Assign role
+		mhr := role.ModelHasRole{
+			RoleID:    u.RoleID,
+			ModelType: "User",
+			ModelID:   newUser.ID,
+		}
+		if err := db.Create(&mhr).Error; err != nil {
+			logger.Errorf("Failed to assign role to user %s: %v", u.Email, err)
+		} else {
+			logger.Infof("Assigned role %d to user %s", u.RoleID, u.Email)
 		}
 	}
 

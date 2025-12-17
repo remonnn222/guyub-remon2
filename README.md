@@ -784,7 +784,8 @@ chore: maintenance
 
 | Document | Description |
 |----------|-------------|
-| [CLAUDE.md](./CLAUDE.md) | AI development memory and project context |
+| [docs/PANDUAN.md](./docs/PANDUAN.md) | Comprehensive development guide (Bahasa Indonesia) |
+| [database/](./database/) | Database schema and seed files for quick setup |
 
 ---
 

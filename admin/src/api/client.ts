@@ -101,13 +101,25 @@ apiClient.interceptors.response.use(
       }
 
       try {
-        const response = await axios.post<ApiResponse<AuthTokens>>(
-          `${import.meta.env.VITE_API_URL}/auth/refresh`,
+        // Backend returns flat token structure, not nested
+        interface RefreshApiResponse {
+          success: boolean;
+          data: {
+            access_token: string;
+            refresh_token: string;
+            token_type: string;
+            expires_in: number;
+          };
+        }
+
+        const response = await axios.post<RefreshApiResponse>(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1'}/auth/refresh`,
           { refresh_token: refreshToken },
           { headers: { 'Content-Type': 'application/json' } }
         );
 
-        const newTokens = response.data.data;
+        const { access_token, refresh_token, token_type, expires_in } = response.data.data;
+        const newTokens: AuthTokens = { access_token, refresh_token, token_type, expires_in };
         tokenManager.setTokens(newTokens);
         processQueue(null, newTokens.access_token);
         originalRequest.headers.Authorization = `Bearer ${newTokens.access_token}`;

@@ -7,6 +7,10 @@ import (
 	"syscall"
 
 	// Application layer
+	appActivity "guyub/internal/application/activity"
+	appAnalytics "guyub/internal/application/analytics"
+	appAsset "guyub/internal/application/asset"
+	appAudit "guyub/internal/application/audit"
 	appAuth "guyub/internal/application/auth"
 	appMaster "guyub/internal/application/master"
 	appRole "guyub/internal/application/role"
@@ -15,6 +19,7 @@ import (
 	// Infrastructure layer
 	infraAuth "guyub/internal/infrastructure/auth"
 	"guyub/internal/infrastructure/persistence/mysql"
+	"guyub/internal/infrastructure/storage"
 
 	// Presentation layer
 	"guyub/internal/presentation/http/handler"
@@ -57,6 +62,7 @@ func main() {
 	// Initialize infrastructure services
 	jwtService := infraAuth.NewJWTService(&cfg.JWT)
 	passwordService := infraAuth.NewPasswordService()
+	storageService := storage.NewLocalStorage(&cfg.Storage, cfg.App.URL)
 
 	// Initialize repositories
 	userRepo := mysql.NewUserRepository(db)
@@ -66,12 +72,17 @@ func main() {
 	masterValueRepo := mysql.NewMasterValueRepository(db)
 	activityRepo := mysql.NewActivityRepository(db)
 	auditRepo := mysql.NewAuditRepository(db)
+	assetRepo := mysql.NewAssetRepository(db)
 
 	// Initialize application services
-	authService := appAuth.NewService(userRepo, activityRepo, jwtService, passwordService)
-	userService := appUser.NewService(userRepo, auditRepo, passwordService)
+	authService := appAuth.NewService(userRepo, activityRepo, assetRepo, storageService, jwtService, passwordService)
+	userService := appUser.NewService(userRepo, auditRepo, assetRepo, storageService, passwordService)
 	roleService := appRole.NewService(roleRepo, permissionRepo)
 	masterService := appMaster.NewService(masterTypeRepo, masterValueRepo)
+	analyticsService := appAnalytics.NewService(userRepo, roleRepo, permissionRepo, activityRepo)
+	activityService := appActivity.NewService(activityRepo)
+	auditService := appAudit.NewService(auditRepo)
+	assetService := appAsset.NewService(assetRepo, storageService)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(jwtService)
@@ -81,6 +92,10 @@ func main() {
 	userHandler := handler.NewUserHandler(userService)
 	roleHandler := handler.NewRoleHandler(roleService)
 	masterHandler := handler.NewMasterHandler(masterService)
+	analyticsHandler := handler.NewAnalyticsHandler(analyticsService)
+	activityHandler := handler.NewActivityHandler(activityService)
+	auditHandler := handler.NewAuditHandler(auditService)
+	assetHandler := handler.NewAssetHandler(assetService)
 
 	// Initialize router
 	r := router.New(
@@ -89,10 +104,15 @@ func main() {
 		userHandler,
 		roleHandler,
 		masterHandler,
+		analyticsHandler,
+		activityHandler,
+		auditHandler,
+		assetHandler,
 		&router.Config{
 			CORSAllowedOrigins: cfg.CORS.AllowedOrigins,
 			CORSAllowedMethods: cfg.CORS.AllowedMethods,
 			CORSAllowedHeaders: cfg.CORS.AllowedHeaders,
+			StoragePath:        cfg.Storage.Path,
 		},
 	)
 

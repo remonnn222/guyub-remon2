@@ -20,11 +20,15 @@ func NewUserRepository(db *gorm.DB) user.Repository {
 }
 
 func (r *UserRepository) Create(ctx context.Context, u *user.User) error {
-	return r.db.WithContext(ctx).Create(u).Error
+	// Omit Roles to prevent GORM from auto-managing the polymorphic join table
+	// Roles are handled separately via SyncRoles which properly includes model_type
+	return r.db.WithContext(ctx).Omit("Roles").Create(u).Error
 }
 
 func (r *UserRepository) Update(ctx context.Context, u *user.User) error {
-	return r.db.WithContext(ctx).Save(u).Error
+	// Omit Roles to prevent GORM from auto-managing the polymorphic join table
+	// Roles are handled separately via SyncRoles which properly includes model_type
+	return r.db.WithContext(ctx).Omit("Roles").Save(u).Error
 }
 
 func (r *UserRepository) Delete(ctx context.Context, id uint64) error {

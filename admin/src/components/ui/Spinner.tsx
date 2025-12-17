@@ -53,4 +53,5 @@ export const InlineLoader: React.FC<{ message?: string }> = ({
   );
 };
 
+export { Spinner };
 export default Spinner;

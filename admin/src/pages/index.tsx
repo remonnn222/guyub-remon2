@@ -6,17 +6,22 @@ export { default as DashboardPage } from './dashboard/DashboardPage';
 
 // Users
 export { default as UsersListPage } from './users/UsersListPage';
+export { default as UserFormPage } from './users/UserFormPage';
 
 // Family Tree
 export { default as FamilyTreePage } from './family/FamilyTreePage';
 
-// Placeholder pages for other modules
-export const RolesListPage = () => <div>Roles List</div>;
-export const MasterDataPage = () => <div>Master Data</div>;
-export const AuditLogsPage = () => <div>Audit Logs</div>;
-export const ActivityLogsPage = () => <div>Activity Logs</div>;
-export const AnalyticsPage = () => <div>Analytics</div>;
-export const ProfilePage = () => <div>Profile</div>;
+// Roles & Admin
+export { default as RolesListPage } from './roles/RolesListPage';
+export { default as MasterDataPage } from './master/MasterDataPage';
+export { default as AuditLogsPage } from './audit/AuditLogsPage';
+export { default as ActivityLogsPage } from './activity/ActivityLogsPage';
+export { default as AnalyticsPage } from './analytics/AnalyticsPage';
+
+// Profile
+export { default as ProfilePage } from './profile/ProfilePage';
+
+// Placeholder pages
 export const FamiliesListPage = () => <div>Families List</div>;
 export const NotFoundPage = () => (
   <div className="flex flex-col items-center justify-center min-h-[400px]">

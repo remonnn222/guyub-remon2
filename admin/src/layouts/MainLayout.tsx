@@ -166,7 +166,7 @@ const MainLayout: React.FC = () => {
             >
               <Avatar
                 name={user?.name || 'User'}
-                src={user?.avatar}
+                src={user?.avatar_url}
                 size="sm"
               />
               {!sidebarCollapsed && (

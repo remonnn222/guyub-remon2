@@ -116,7 +116,7 @@ func (h *MasterHandler) RestoreType(c *gin.Context) {
 
 // Value handlers
 func (h *MasterHandler) ListValuesByTypeID(c *gin.Context) {
-	typeID, err := strconv.ParseUint(c.Param("type_id"), 10, 64)
+	typeID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		response.BadRequest(c, "Invalid type ID", nil)
 		return

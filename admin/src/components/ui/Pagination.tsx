@@ -148,7 +148,7 @@ const Pagination: React.FC<PaginationProps> = ({
               </span>
             ) : (
               <button
-                key={page}
+                key={`page-${page}`}
                 onClick={() => onPageChange(page)}
                 className={clsx(
                   'px-3 py-1 text-sm rounded-md transition-colors',

@@ -1,22 +1,42 @@
 import apiClient, { tokenManager } from './client';
 import { ApiResponse, AuthTokens, LoginCredentials, User } from '@/types';
 
+// Backend login response structure (tokens are flat, not nested)
+interface LoginApiResponse {
+  user: User;
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  expires_in: number;
+}
+
 export const authApi = {
   /**
    * Login with email and password
    */
   login: async (credentials: LoginCredentials): Promise<ApiResponse<{ user: User; tokens: AuthTokens }>> => {
-    const response = await apiClient.post<ApiResponse<{ user: User; tokens: AuthTokens }>>(
+    const response = await apiClient.post<ApiResponse<LoginApiResponse>>(
       '/auth/login',
       credentials
     );
 
-    // Store tokens
+    // Store tokens (extract from flat structure)
     if (response.data.success) {
-      tokenManager.setTokens(response.data.data.tokens);
+      const { access_token, refresh_token, token_type, expires_in } = response.data.data;
+      const tokens: AuthTokens = { access_token, refresh_token, token_type, expires_in };
+      tokenManager.setTokens(tokens);
+
+      // Return in expected format
+      return {
+        ...response.data,
+        data: {
+          user: response.data.data.user,
+          tokens,
+        },
+      };
     }
 
-    return response.data;
+    return response.data as unknown as ApiResponse<{ user: User; tokens: AuthTokens }>;
   },
 
   /**
@@ -35,15 +55,22 @@ export const authApi = {
    */
   refresh: async (): Promise<ApiResponse<AuthTokens>> => {
     const refreshToken = tokenManager.getRefreshToken();
-    const response = await apiClient.post<ApiResponse<AuthTokens>>('/auth/refresh', {
+    const response = await apiClient.post<ApiResponse<LoginApiResponse>>('/auth/refresh', {
       refresh_token: refreshToken,
     });
 
     if (response.data.success) {
-      tokenManager.setTokens(response.data.data);
+      const { access_token, refresh_token, token_type, expires_in } = response.data.data;
+      const tokens: AuthTokens = { access_token, refresh_token, token_type, expires_in };
+      tokenManager.setTokens(tokens);
+
+      return {
+        ...response.data,
+        data: tokens,
+      };
     }
 
-    return response.data;
+    return response.data as unknown as ApiResponse<AuthTokens>;
   },
 
   /**

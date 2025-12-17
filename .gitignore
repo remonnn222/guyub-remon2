@@ -67,6 +67,9 @@ test-results/
 backend/tmp/
 backend/storage/uploads/*
 !backend/storage/uploads/.gitkeep
+backend/main
+backend/server
+backend/*.exe
 
 # ================================
 # Cache

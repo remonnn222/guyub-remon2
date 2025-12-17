@@ -32,3 +32,6 @@ export type { CardProps, CardHeaderProps, CardBodyProps, CardFooterProps } from 
 
 export { default as Spinner, LoadingOverlay, InlineLoader } from './Spinner';
 export type { SpinnerProps } from './Spinner';
+
+export { FileUpload, FilePreview } from './FileUpload';
+export { AvatarUpload } from './AvatarUpload';

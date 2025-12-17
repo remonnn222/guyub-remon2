@@ -1,5 +1,12 @@
 import apiClient from './client';
-import { ApiResponse, Asset } from '@/types';
+import { ApiResponse, Asset, AssetKind } from '@/types';
+
+export interface UploadOptions {
+  kind: AssetKind;
+  refId?: string;
+  title?: string;
+  onProgress?: (progress: number) => void;
+}
 
 export const assetsApi = {
   /**
@@ -7,22 +14,27 @@ export const assetsApi = {
    */
   upload: async (
     file: File,
-    options?: {
-      kind?: string;
-      refId?: number;
-    }
+    options: UploadOptions
   ): Promise<ApiResponse<Asset>> => {
     const formData = new FormData();
     formData.append('file', file);
-    if (options?.kind) {
-      formData.append('kind', options.kind);
+    formData.append('kind', options.kind);
+
+    if (options.refId) {
+      formData.append('ref_id', options.refId);
     }
-    if (options?.refId) {
-      formData.append('ref_id', options.refId.toString());
+    if (options.title) {
+      formData.append('title', options.title);
     }
 
     const response = await apiClient.post<ApiResponse<Asset>>('/assets/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: (progressEvent) => {
+        if (options.onProgress && progressEvent.total) {
+          const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          options.onProgress(progress);
+        }
+      },
     });
     return response.data;
   },
@@ -38,10 +50,20 @@ export const assetsApi = {
   /**
    * Get assets by reference
    */
-  getByRef: async (refId: number, kind: string): Promise<ApiResponse<Asset[]>> => {
-    const response = await apiClient.get<ApiResponse<Asset[]>>('/assets/by-ref', {
-      params: { ref_id: refId, kind },
-    });
+  getByRef: async (refId: string, kind?: AssetKind): Promise<ApiResponse<Asset[]>> => {
+    const params: Record<string, string> = { ref_id: refId };
+    if (kind) {
+      params.kind = kind;
+    }
+    const response = await apiClient.get<ApiResponse<Asset[]>>('/assets/by-ref', { params });
+    return response.data;
+  },
+
+  /**
+   * Get user avatar
+   */
+  getUserAvatar: async (userId: number): Promise<ApiResponse<{ url: string }>> => {
+    const response = await apiClient.get<ApiResponse<{ url: string }>>(`/assets/user/${userId}/avatar`);
     return response.data;
   },
 
@@ -54,11 +76,11 @@ export const assetsApi = {
   },
 
   /**
-   * Get asset URL
+   * Link asset to reference
    */
-  getUrl: (id: string): string => {
-    const baseUrl = import.meta.env.VITE_ASSETS_URL || 'http://localhost:8080/assets';
-    return `${baseUrl}/${id}`;
+  linkToRef: async (id: string, refId: string): Promise<ApiResponse<null>> => {
+    const response = await apiClient.post<ApiResponse<null>>(`/assets/${id}/link`, { ref_id: refId });
+    return response.data;
   },
 };
 

@@ -42,7 +42,7 @@ const Badge: React.FC<BadgeProps> = ({
 };
 
 // Status-specific badges
-export const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
+export const StatusBadge: React.FC<{ status: string | { value: string; label: string } }> = ({ status }) => {
   const statusVariants: Record<string, BadgeProps['variant']> = {
     active: 'success',
     inactive: 'gray',
@@ -50,9 +50,17 @@ export const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
     pending: 'warning',
   };
 
+  // Handle both string and object status
+  const statusValue = typeof status === 'object' ? status?.value : status;
+  const statusLabel = typeof status === 'object' ? status?.label : status;
+
+  if (!statusValue) {
+    return <Badge variant="gray">N/A</Badge>;
+  }
+
   return (
-    <Badge variant={statusVariants[status.toLowerCase()] || 'gray'}>
-      {status.charAt(0).toUpperCase() + status.slice(1)}
+    <Badge variant={statusVariants[statusValue.toLowerCase()] || 'gray'}>
+      {statusLabel || statusValue.charAt(0).toUpperCase() + statusValue.slice(1)}
     </Badge>
   );
 };

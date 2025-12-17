@@ -4,6 +4,7 @@ import {
   LoginPage,
   DashboardPage,
   UsersListPage,
+  UserFormPage,
   RolesListPage,
   MasterDataPage,
   AuditLogsPage,
@@ -54,11 +55,11 @@ const router = createBrowserRouter([
               },
               {
                 path: 'create',
-                element: <div>Create User</div>,
+                element: <UserFormPage />,
               },
               {
                 path: ':id/edit',
-                element: <div>Edit User</div>,
+                element: <UserFormPage />,
               },
             ],
           },

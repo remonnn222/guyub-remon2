@@ -93,24 +93,38 @@ export const useAuthStore = create<AuthStore>()(
         if (!user) return false;
 
         // Super admin bypasses all permission checks
-        if (user.roles?.some((role) => role.name === 'super_admin')) {
+        // Handle both string[] and Role[] formats from API
+        const isSuperAdmin = user.roles?.some((role) => {
+          if (typeof role === 'string') return role === 'super_admin';
+          return role.name === 'super_admin';
+        });
+        if (isSuperAdmin) {
           return true;
         }
 
         // Check direct permissions
-        if (user.permissions?.some((p) => p.name === permission)) {
+        // Handle both string[] and Permission[] formats
+        if (user.permissions?.some((p) => {
+          if (typeof p === 'string') return p === permission;
+          return p.name === permission;
+        })) {
           return true;
         }
 
-        // Check role permissions
-        return user.roles?.some((role) =>
-          role.permissions?.some((p) => p.name === permission)
-        ) ?? false;
+        // Check role permissions (only works with Role[] format)
+        return user.roles?.some((role) => {
+          if (typeof role === 'string') return false;
+          return role.permissions?.some((p) => p.name === permission);
+        }) ?? false;
       },
 
       hasRole: (role: string) => {
         const { user } = get();
-        return user?.roles?.some((r) => r.name === role) ?? false;
+        // Handle both string[] and Role[] formats from API
+        return user?.roles?.some((r) => {
+          if (typeof r === 'string') return r === role;
+          return r.name === role;
+        }) ?? false;
       },
 
       hasAnyPermission: (permissions: string[]) => {

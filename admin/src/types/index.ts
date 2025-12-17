@@ -52,7 +52,7 @@ export interface User extends SoftDeleteEntity {
   email: string;
   email_verified_at: string | null;
   phone: string | null;
-  avatar: string | null;
+  avatar_url: string | null;
   status: UserStatus;
   type: UserType;
   two_factor_enabled: boolean;
@@ -207,19 +207,20 @@ export interface ActivityFilters {
 // Asset Types
 // ============================================
 
+export type AssetKind = 'user_avatar' | 'product_image' | 'document' | 'attachment';
+
 export interface Asset {
   id: string; // UUID
-  ref_id: number | null;
-  kind: string | null;
-  original_name: string;
-  storage_path: string;
+  ref_id?: string;
+  kind: AssetKind;
+  title?: string;
+  original_filename: string;
   mime_type: string;
-  size: number;
-  metadata: Record<string, unknown> | null;
-  uploaded_by: number | null;
+  file_size: number;
+  human_size: string;
+  url: string;
+  is_image: boolean;
   created_at: string;
-  updated_at: string;
-  url?: string;
 }
 
 // ============================================

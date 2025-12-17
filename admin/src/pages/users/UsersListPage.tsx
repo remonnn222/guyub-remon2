@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import {
@@ -72,9 +72,11 @@ const UsersListPage: React.FC = () => {
   const meta = data?.meta;
 
   // Update pagination meta when data changes
-  if (meta) {
-    pagination.updateMeta(meta);
-  }
+  useEffect(() => {
+    if (meta) {
+      pagination.updateMeta(meta);
+    }
+  }, [meta]);
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -154,7 +156,7 @@ const UsersListPage: React.FC = () => {
       sortable: true,
       render: (user) => (
         <div className="flex items-center gap-3">
-          <Avatar name={user.name} src={user.avatar} size="sm" />
+          <Avatar name={user.name} src={user.avatar_url} size="sm" />
           <div>
             <p className="font-medium text-gray-900">{user.name}</p>
             <p className="text-sm text-gray-500">{user.email}</p>
@@ -172,20 +174,23 @@ const UsersListPage: React.FC = () => {
       key: 'type',
       label: 'Type',
       sortable: true,
-      render: (user) => (
-        <Badge variant="gray">
-          {user.type.charAt(0).toUpperCase() + user.type.slice(1)}
-        </Badge>
-      ),
+      render: (user) => {
+        const typeValue = typeof user.type === 'object' ? user.type?.label || user.type?.value : user.type;
+        return (
+          <Badge variant="gray">
+            {typeValue || 'N/A'}
+          </Badge>
+        );
+      },
     },
     {
       key: 'roles',
       label: 'Roles',
       render: (user) => (
         <div className="flex flex-wrap gap-1">
-          {user.roles?.slice(0, 2).map((role) => (
-            <Badge key={role.id} variant="primary" size="sm">
-              {role.name}
+          {user.roles?.slice(0, 2).map((role, index) => (
+            <Badge key={typeof role === 'string' ? role : role.id || index} variant="primary" size="sm">
+              {typeof role === 'string' ? role : role.name}
             </Badge>
           ))}
           {user.roles && user.roles.length > 2 && (

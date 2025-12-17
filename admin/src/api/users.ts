@@ -119,6 +119,20 @@ export const usersApi = {
     });
     return response.data;
   },
+
+  /**
+   * Change user password
+   */
+  changePassword: async (
+    id: number,
+    data: { current_password: string; password: string; password_confirmation: string }
+  ): Promise<ApiResponse<null>> => {
+    const response = await apiClient.post<ApiResponse<null>>(
+      `/users/${id}/change-password`,
+      data
+    );
+    return response.data;
+  },
 };
 
 export default usersApi;

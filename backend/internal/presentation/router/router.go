@@ -9,18 +9,24 @@ import (
 )
 
 type Router struct {
-	engine         *gin.Engine
-	authMiddleware *middleware.AuthMiddleware
-	authHandler    *handler.AuthHandler
-	userHandler    *handler.UserHandler
-	roleHandler    *handler.RoleHandler
-	masterHandler  *handler.MasterHandler
+	engine           *gin.Engine
+	authMiddleware   *middleware.AuthMiddleware
+	authHandler      *handler.AuthHandler
+	userHandler      *handler.UserHandler
+	roleHandler      *handler.RoleHandler
+	masterHandler    *handler.MasterHandler
+	analyticsHandler *handler.AnalyticsHandler
+	activityHandler  *handler.ActivityHandler
+	auditHandler     *handler.AuditHandler
+	assetHandler     *handler.AssetHandler
+	storagePath      string
 }
 
 type Config struct {
 	CORSAllowedOrigins []string
 	CORSAllowedMethods []string
 	CORSAllowedHeaders []string
+	StoragePath        string
 }
 
 func New(
@@ -29,6 +35,10 @@ func New(
 	userHandler *handler.UserHandler,
 	roleHandler *handler.RoleHandler,
 	masterHandler *handler.MasterHandler,
+	analyticsHandler *handler.AnalyticsHandler,
+	activityHandler *handler.ActivityHandler,
+	auditHandler *handler.AuditHandler,
+	assetHandler *handler.AssetHandler,
 	cfg *Config,
 ) *Router {
 	engine := gin.New()
@@ -46,12 +56,17 @@ func New(
 	}))
 
 	return &Router{
-		engine:         engine,
-		authMiddleware: authMiddleware,
-		authHandler:    authHandler,
-		userHandler:    userHandler,
-		roleHandler:    roleHandler,
-		masterHandler:  masterHandler,
+		engine:           engine,
+		authMiddleware:   authMiddleware,
+		authHandler:      authHandler,
+		userHandler:      userHandler,
+		roleHandler:      roleHandler,
+		masterHandler:    masterHandler,
+		analyticsHandler: analyticsHandler,
+		activityHandler:  activityHandler,
+		auditHandler:     auditHandler,
+		assetHandler:     assetHandler,
+		storagePath:      cfg.StoragePath,
 	}
 }
 
@@ -129,7 +144,7 @@ func (r *Router) Setup() *gin.Engine {
 					types.PUT("/:id", middleware.RequirePermission("master.edit"), r.masterHandler.UpdateType)
 					types.DELETE("/:id", middleware.RequirePermission("master.delete"), r.masterHandler.DeleteType)
 					types.POST("/:id/restore", middleware.RequirePermission("master.delete"), r.masterHandler.RestoreType)
-					types.GET("/:type_id/values", middleware.RequirePermission("master.view"), r.masterHandler.ListValuesByTypeID)
+					types.GET("/:id/values", middleware.RequirePermission("master.view"), r.masterHandler.ListValuesByTypeID)
 				}
 
 				// Values
@@ -145,8 +160,45 @@ func (r *Router) Setup() *gin.Engine {
 				master.GET("/cascade/:type_code", middleware.RequirePermission("master.view"), r.masterHandler.GetCascading)
 				master.GET("/by-code/:type_code/values", middleware.RequirePermission("master.view"), r.masterHandler.ListValuesByTypeCode)
 			}
+
+			// Analytics
+			analyticsGroup := protected.Group("/analytics")
+			{
+				analyticsGroup.GET("/dashboard", r.analyticsHandler.Dashboard)
+			}
+
+			// Activity Logs
+			activityGroup := protected.Group("/activity")
+			{
+				activityGroup.GET("", middleware.RequirePermission("activity.view"), r.activityHandler.List)
+				activityGroup.GET("/stats", middleware.RequirePermission("activity.view"), r.activityHandler.Stats)
+				activityGroup.GET("/:id", middleware.RequirePermission("activity.view"), r.activityHandler.Show)
+				activityGroup.GET("/user/:user_id/stats", middleware.RequirePermission("activity.view"), r.activityHandler.UserStats)
+			}
+
+			// Audit Logs
+			auditGroup := protected.Group("/audit")
+			{
+				auditGroup.GET("", middleware.RequirePermission("audit.view"), r.auditHandler.List)
+				auditGroup.GET("/stats", middleware.RequirePermission("audit.view"), r.auditHandler.Stats)
+				auditGroup.GET("/:id", middleware.RequirePermission("audit.view"), r.auditHandler.Show)
+			}
+
+			// Assets
+			assets := protected.Group("/assets")
+			{
+				assets.POST("/upload", r.assetHandler.Upload)
+				assets.GET("/by-ref", r.assetHandler.ListByRef)
+				assets.GET("/user/:user_id/avatar", r.assetHandler.GetUserAvatar)
+				assets.GET("/:id", r.assetHandler.Show)
+				assets.DELETE("/:id", r.assetHandler.Delete)
+				assets.POST("/:id/link", r.assetHandler.LinkToRef)
+			}
 		}
 	}
+
+	// Static file serving for uploaded assets
+	r.engine.Static("/assets", r.storagePath)
 
 	return r.engine
 }

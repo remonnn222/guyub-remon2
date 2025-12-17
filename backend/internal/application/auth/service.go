@@ -3,8 +3,10 @@ package auth
 import (
 	"context"
 	"errors"
+	"strconv"
 
 	"guyub/internal/domain/activity"
+	"guyub/internal/domain/asset"
 	"guyub/internal/domain/user"
 	infraAuth "guyub/internal/infrastructure/auth"
 )
@@ -20,6 +22,8 @@ var (
 type Service struct {
 	userRepo        user.Repository
 	activityRepo    activity.Repository
+	assetRepo       asset.Repository
+	storageService  asset.StorageService
 	jwtService      *infraAuth.JWTService
 	passwordService *infraAuth.PasswordService
 }
@@ -27,12 +31,16 @@ type Service struct {
 func NewService(
 	userRepo user.Repository,
 	activityRepo activity.Repository,
+	assetRepo asset.Repository,
+	storageService asset.StorageService,
 	jwtService *infraAuth.JWTService,
 	passwordService *infraAuth.PasswordService,
 ) *Service {
 	return &Service{
 		userRepo:        userRepo,
 		activityRepo:    activityRepo,
+		assetRepo:       assetRepo,
+		storageService:  storageService,
 		jwtService:      jwtService,
 		passwordService: passwordService,
 	}
@@ -56,6 +64,7 @@ type UserResponse struct {
 	Name        string   `json:"name"`
 	Email       string   `json:"email"`
 	Phone       *string  `json:"phone,omitempty"`
+	AvatarURL   *string  `json:"avatar_url,omitempty"`
 	Status      string   `json:"status"`
 	Type        string   `json:"type"`
 	Roles       []string `json:"roles"`
@@ -110,12 +119,15 @@ func (s *Service) Login(ctx context.Context, req *LoginRequest, ip, userAgent st
 	// Log successful login
 	s.logLogin(ctx, u.ID, ip, userAgent)
 
+	avatarURL := s.getAvatarURL(ctx, u.ID)
+
 	return &LoginResponse{
 		User: &UserResponse{
 			ID:          u.ID,
 			Name:        u.Name,
 			Email:       u.Email,
 			Phone:       u.Phone,
+			AvatarURL:   avatarURL,
 			Status:      u.Status.String(),
 			Type:        u.Type.String(),
 			Roles:       roles,
@@ -171,12 +183,15 @@ func (s *Service) Refresh(ctx context.Context, req *RefreshRequest) (*LoginRespo
 		return nil, err
 	}
 
+	avatarURL := s.getAvatarURL(ctx, u.ID)
+
 	return &LoginResponse{
 		User: &UserResponse{
 			ID:          u.ID,
 			Name:        u.Name,
 			Email:       u.Email,
 			Phone:       u.Phone,
+			AvatarURL:   avatarURL,
 			Status:      u.Status.String(),
 			Type:        u.Type.String(),
 			Roles:       roles,
@@ -203,16 +218,33 @@ func (s *Service) Me(ctx context.Context, userID uint64) (*UserResponse, error) 
 		return nil, err
 	}
 
+	avatarURL := s.getAvatarURL(ctx, u.ID)
+
 	return &UserResponse{
 		ID:          u.ID,
 		Name:        u.Name,
 		Email:       u.Email,
 		Phone:       u.Phone,
+		AvatarURL:   avatarURL,
 		Status:      u.Status.String(),
 		Type:        u.Type.String(),
 		Roles:       u.GetRoleNames(),
 		Permissions: permissions,
 	}, nil
+}
+
+// getAvatarURL fetches the avatar URL for a user
+func (s *Service) getAvatarURL(ctx context.Context, userID uint64) *string {
+	if s.assetRepo == nil || s.storageService == nil {
+		return nil
+	}
+	refID := strconv.FormatUint(userID, 10)
+	avatar, err := s.assetRepo.FindLatestByRefIDAndKind(ctx, refID, asset.KindUserAvatar)
+	if err != nil || avatar == nil {
+		return nil
+	}
+	url := s.storageService.URL(avatar.StoragePath)
+	return &url
 }
 
 // Activity logging helpers
