@@ -1,0 +1,43 @@
+app:
+  name: Guyub-Platform
+  env: development
+  port: 8080
+  url: http://localhost:8080
+  debug: true
+
+database:
+  host: localhost
+  port: 3306
+  database: guyub
+  username: root
+  password: ""
+  max_open_conns: 25
+  max_idle_conns: 5
+  conn_max_lifetime: 5m
+
+jwt:
+  secret: your-256-bit-secret-change-in-production
+  expiry: 1h
+  refresh_expiry: 168h
+
+storage:
+  driver: local
+  path: ./storage/uploads
+
+cors:
+  allowed_origins:
+    - http://localhost:3000
+    - http://localhost:5173
+  allowed_methods:
+    - GET
+    - POST
+    - PUT
+    - DELETE
+    - OPTIONS
+  allowed_headers:
+    - Authorization
+    - Content-Type
+
+log:
+  level: debug
+  format: console
