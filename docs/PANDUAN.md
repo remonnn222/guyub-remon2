@@ -947,13 +947,21 @@
 
 ### Apa itu Guyub Platform?
 
-Guyub Platform adalah sistem admin/management yang dibangun dengan prinsip **Clean Architecture**. Platform ini menyediakan:
+**Guyub** (bahasa Jawa untuk "kebersamaan") adalah platform **Family Tree & Genealogy** yang dibangun dengan prinsip **Clean Architecture**. Platform ini membantu keluarga melestarikan sejarah mereka dan memperkuat ikatan lintas generasi.
 
+**Fitur Utama Family Tree:**
+- **Interactive Family Tree** - Visualisasi pohon keluarga menggunakan React Flow dengan drag-and-drop
+- **Person Management** - Profil lengkap: nama, gender, tanggal lahir/wafat, foto, pekerjaan
+- **Relationship Mapping** - Koneksi parent-child, spouse, sibling dengan garis visual
+- **Auto Layout** - Pengaturan otomatis posisi node berdasarkan generasi
+- **Landing Page** - Halaman publik dengan preview pohon keluarga (Bahasa Indonesia)
+
+**Fitur Admin:**
 - **User Management** - Manajemen user dengan RBAC (Role-Based Access Control)
 - **Master Data** - Data master dengan tipe hierarkis dan nilai bertingkat (cascading)
 - **Audit Logging** - Log audit yang immutable (tidak bisa diubah/dihapus)
 - **Activity Tracking** - Pelacakan aktivitas user
-- **Asset Management** - Manajemen file upload
+- **Asset Management** - Manajemen file upload (foto keluarga)
 - **Analytics Dashboard** - Dashboard statistik dan grafik
 
 ### Mengapa Clean Architecture?
@@ -2449,6 +2457,44 @@ export default UserDetail;
 
 ## 9. Database & Migration
 
+### Family Tree Database Schema
+
+```
+┌────────────────────┐       ┌────────────────────┐
+│     families       │       │      persons       │
+├────────────────────┤       ├────────────────────┤
+│ id                 │◄──────┤ family_id (FK)     │
+│ name               │       │ id                 │
+│ description        │       │ first_name         │
+│ origin             │       │ last_name          │
+│ motto              │       │ nickname           │
+│ invite_code        │       │ gender             │
+│ is_public          │       │ birth_date         │
+│ created_by         │       │ death_date         │
+└────────────────────┘       │ is_alive           │
+                             │ photo_url          │
+                             │ generation_level   │
+                             └─────────┬──────────┘
+                                       │
+        ┌──────────────────────────────┴──────────────────────────────┐
+        │                                                              │
+        ▼                                                              ▼
+┌────────────────────┐                                   ┌────────────────────┐
+│   relationships    │                                   │   tree_positions   │
+├────────────────────┤                                   ├────────────────────┤
+│ id                 │                                   │ id                 │
+│ person_id (FK)     │                                   │ person_id (FK)     │
+│ related_person_id  │                                   │ family_id (FK)     │
+│ type               │                                   │ x                  │
+│ marriage_status    │                                   │ y                  │
+│ marriage_date      │                                   │ level              │
+│ divorce_date       │                                   │ order              │
+└────────────────────┘                                   └────────────────────┘
+
+Relationship Types: parent, child, spouse, sibling
+Marriage Status: married, divorced, widowed
+```
+
 ### Membuat Migration Baru
 
 ```bash
@@ -2651,6 +2697,69 @@ export const useUIStore = create<UIState>((set) => ({
     error: (message) => { /* implementation */ },
   },
 }));
+```
+
+### Family Tree Component
+
+Family Tree menggunakan **React Flow** (@xyflow/react) untuk visualisasi interaktif pohon keluarga.
+
+#### Struktur Komponen
+
+```
+admin/src/components/family/
+├── FamilyTree.tsx      # Komponen utama React Flow
+├── PersonNode.tsx      # Custom node untuk setiap person
+└── index.ts            # Export barrel
+```
+
+#### FamilyTree Props
+
+```tsx
+interface FamilyTreeProps {
+  data: FamilyTreeData;                    // Data pohon keluarga
+  onPersonEdit?: (person: Person) => void; // Handler edit person
+  onAddRelative?: (person: Person, type: RelationshipType) => void;
+  onPositionsChange?: (positions: Position[]) => void;
+  isEditable?: boolean;                    // Default true
+  minimal?: boolean;                       // Default false - hide semua controls
+}
+```
+
+#### Penggunaan Minimal Mode
+
+Untuk preview di landing page, gunakan `minimal={true}`:
+
+```tsx
+<FamilyTree
+  data={demoFamily}
+  minimal={true}       // Sembunyikan semua controls
+  isEditable={false}   // Non-editable
+/>
+```
+
+Dalam minimal mode:
+- Search bar, stats panel, minimap, legend tersembunyi
+- Background transparan
+- Drag, zoom, pan dinonaktifkan
+- Hanya menampilkan nodes dan edges
+
+#### Edge Styling
+
+| Relationship | Style |
+|-------------|-------|
+| Parent-Child | Solid line, amber color, arrow marker |
+| Spouse | Dashed line, pink color, animated |
+| Sibling | Dashed line, indigo color |
+
+#### Auto Layout
+
+```tsx
+// Fungsi auto-layout mengelompokkan berdasarkan generation_level
+function autoLayout(persons: Person[], relationships: Relationship[]) {
+  // Group by generation
+  // Calculate horizontal spread
+  // Center each generation
+}
 ```
 
 ### Form Handling dengan React Hook Form

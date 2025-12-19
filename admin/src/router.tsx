@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { MainLayout, AuthLayout } from '@/layouts';
 import {
+  LandingPage,
   LoginPage,
   DashboardPage,
   UsersListPage,
@@ -18,10 +19,12 @@ import {
 import { ProtectedRoute, GuestRoute } from '@/components/shared/RouteGuards';
 
 const router = createBrowserRouter([
+  // Public landing page with tree preview
   {
     path: '/',
-    element: <Navigate to="/dashboard" replace />,
+    element: <LandingPage />,
   },
+  // Auth routes (guest only)
   {
     element: <GuestRoute />,
     children: [

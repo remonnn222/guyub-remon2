@@ -1,6 +1,6 @@
 # Guyub Platform
 
-> A comprehensive admin/management platform built with Clean Architecture using Go (Gin) + React (TypeScript) + MySQL.
+> **Guyub** (Javanese for "togetherness") - A Family Tree & Genealogy Platform built with Clean Architecture using Go (Gin) + React (TypeScript) + MySQL + React Flow.
 
 [![Go Version](https://img.shields.io/badge/Go-1.23+-00ADD8?style=flat&logo=go)](https://golang.org)
 [![React Version](https://img.shields.io/badge/React-18+-61DAFB?style=flat&logo=react)](https://reactjs.org)
@@ -28,14 +28,15 @@
 
 ## Overview
 
-Guyub Platform is a full-featured admin/management system designed with enterprise-grade architecture. It provides a robust foundation for building business applications with:
+Guyub Platform is a **Family Tree & Genealogy** application designed to help families preserve their history and strengthen bonds across generations. Built with enterprise-grade architecture, it provides:
 
+- **Interactive Family Tree** visualization using React Flow
+- **Person Management** with complete profiles (birth/death, photos, occupation)
+- **Relationship Mapping** (parent-child, spouse, sibling connections)
+- **Public Landing Page** with tree preview in Bahasa Indonesia
 - **User Management** with role-based access control (RBAC)
-- **Master Data** management with hierarchical types and cascading values
 - **Audit Logging** that is immutable and comprehensive
-- **Activity Tracking** for security and compliance
-- **Asset Management** for file uploads and media
-- **Analytics Dashboard** for insights and reporting
+- **Asset Management** for photo uploads
 
 The platform follows **Clean Architecture** principles, ensuring:
 - Separation of concerns
@@ -47,11 +48,23 @@ The platform follows **Clean Architecture** principles, ensuring:
 
 ## Features
 
-### Core Features
+### Family Tree Features
 
 | Feature | Description |
 |---------|-------------|
-| **Authentication** | JWT-based auth with refresh tokens, 2FA support |
+| **Interactive Tree** | React Flow-based visualization with drag-and-drop |
+| **Person Profiles** | Complete details: name, gender, birth/death, photo, occupation |
+| **Relationships** | Parent-child, spouse, sibling connections with visual edges |
+| **Auto Layout** | Automatic tree arrangement by generation |
+| **Tree Positions** | Customizable node positions saved to database |
+| **Landing Page** | Public showcase with demo tree (Bahasa Indonesia) |
+| **Minimal Mode** | Clean preview mode hiding all controls |
+
+### Admin Features
+
+| Feature | Description |
+|---------|-------------|
+| **Authentication** | JWT-based auth with refresh tokens |
 | **Authorization** | RBAC with granular permissions |
 | **User Management** | CRUD, bulk operations, import/export |
 | **Role Management** | Dynamic roles with permission assignment |
@@ -163,6 +176,7 @@ module/
 | **TypeScript** | Type safety |
 | **Vite** | Build tool |
 | **React Router** | Routing |
+| **React Flow** | Family tree visualization |
 | **React Query** | Server state |
 | **Zustand** | Client state |
 | **Tailwind CSS** | Styling |
@@ -248,6 +262,9 @@ guyub/
 │   │   ├── components/
 │   │   │   ├── ui/                 # Base UI components
 │   │   │   ├── shared/             # Complex shared
+│   │   │   ├── family/             # Family tree components
+│   │   │   │   ├── FamilyTree.tsx  # React Flow tree
+│   │   │   │   └── PersonNode.tsx  # Custom person node
 │   │   │   ├── auth/
 │   │   │   ├── users/
 │   │   │   ├── roles/
@@ -257,6 +274,10 @@ guyub/
 │   │   ├── hooks/                  # Custom hooks
 │   │   ├── layouts/
 │   │   ├── pages/
+│   │   │   ├── landing/            # Public landing page
+│   │   │   │   └── LandingPage.tsx # Hero with tree preview
+│   │   │   ├── family/             # Family tree pages
+│   │   │   └── ...
 │   │   ├── stores/                 # Zustand stores
 │   │   ├── types/
 │   │   ├── utils/

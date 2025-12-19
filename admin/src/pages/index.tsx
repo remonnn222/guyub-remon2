@@ -1,3 +1,6 @@
+// Landing page
+export { default as LandingPage } from './landing/LandingPage';
+
 // Auth pages
 export { default as LoginPage } from './auth/LoginPage';
 
