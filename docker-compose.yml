@@ -59,7 +59,7 @@ services:
   # Frontend React (development)
   frontend:
     build:
-      context: ./frontend
+      context: ./admin
       dockerfile: Dockerfile.dev
     container_name: guyub-frontend
     restart: unless-stopped
@@ -70,7 +70,7 @@ services:
     ports:
       - "${FRONTEND_PORT:-5173}:5173"
     volumes:
-      - ./frontend:/app
+      - ./admin:/app
       - /app/node_modules
     depends_on:
       - backend
