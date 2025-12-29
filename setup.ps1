@@ -1,148 +1,225 @@
-#############################################
-#  GUYUB PLATFORM - ONE CLICK SETUP
-#  For: Interns & New Developers (PowerShell)
-#############################################
-
-$ErrorActionPreference = "Stop"
+<#
+.SYNOPSIS
+    Guyub Platform - Complete One-Click Setup for Windows
+.DESCRIPTION
+    This script handles EVERYTHING:
+    - Checks Docker
+    - Creates .env files from .env.example
+    - Stops old containers
+    - Builds and starts all services
+    - Waits for services to be ready
+    - Opens browser automatically
+.NOTES
+    For Interns & New Developers
+    Just run: .\setup.ps1
+#>
 
 Write-Host ""
-Write-Host "╔════════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "║     GUYUB PLATFORM - SETUP SCRIPT          ║" -ForegroundColor Cyan
-Write-Host "║     Family Tree & Genealogy Platform       ║" -ForegroundColor Cyan
-Write-Host "╚════════════════════════════════════════════╝" -ForegroundColor Cyan
+Write-Host "=========================================" -ForegroundColor Cyan
+Write-Host "  GUYUB PLATFORM - COMPLETE SETUP" -ForegroundColor Cyan
+Write-Host "  Family Tree & Genealogy Platform" -ForegroundColor Cyan
+Write-Host "=========================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Step 1: Check Docker
-Write-Host "[1/5] Checking Docker..." -ForegroundColor Yellow
-try {
-    $null = docker --version
-    $null = docker info 2>$null
-    Write-Host "[OK] Docker is running" -ForegroundColor Green
-} catch {
-    Write-Host "[ERROR] Docker not found or not running!" -ForegroundColor Red
-    Write-Host "Please install/start Docker Desktop from: https://www.docker.com/products/docker-desktop"
+# ============================================
+# STEP 1: Check Docker
+# ============================================
+Write-Host "[1/6] Checking Docker..." -ForegroundColor Yellow
+
+$dockerVersion = docker --version 2>$null
+if (-not $dockerVersion) {
+    Write-Host ""
+    Write-Host "ERROR: Docker is not installed!" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Please install Docker Desktop:" -ForegroundColor Yellow
+    Write-Host "https://www.docker.com/products/docker-desktop" -ForegroundColor White
+    Write-Host ""
     Read-Host "Press Enter to exit"
     exit 1
 }
 
-# Step 2: Check Docker Compose
-Write-Host "[2/5] Checking Docker Compose..." -ForegroundColor Yellow
-try {
-    $null = docker compose version 2>$null
-    Write-Host "[OK] Docker Compose is available" -ForegroundColor Green
-} catch {
-    try {
-        $null = docker-compose --version
-        Write-Host "[OK] Docker Compose is available" -ForegroundColor Green
-    } catch {
-        Write-Host "[ERROR] Docker Compose not found!" -ForegroundColor Red
-        Read-Host "Press Enter to exit"
-        exit 1
-    }
+$dockerRunning = docker info 2>$null
+if (-not $dockerRunning) {
+    Write-Host ""
+    Write-Host "ERROR: Docker is not running!" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Please start Docker Desktop and try again." -ForegroundColor Yellow
+    Write-Host ""
+    Read-Host "Press Enter to exit"
+    exit 1
 }
 
-# Step 3: Create .env file
-Write-Host "[3/5] Setting up environment..." -ForegroundColor Yellow
+Write-Host "  Docker OK" -ForegroundColor Green
+
+# ============================================
+# STEP 2: Create .env files
+# ============================================
+Write-Host "[2/6] Setting up environment files..." -ForegroundColor Yellow
+
+# Root .env (for docker-compose)
 if (-not (Test-Path ".env")) {
-    @"
-# Database
+    if (Test-Path ".env.example") {
+        Copy-Item ".env.example" ".env"
+        Write-Host "  Created .env from .env.example" -ForegroundColor Green
+    } else {
+        @"
+# Database Configuration
 DB_ROOT_PASSWORD=rootsecret
 DB_DATABASE=guyub
 DB_USERNAME=guyub
 DB_PASSWORD=secret
 DB_PORT=3306
 
-# API
+# API Configuration
 API_PORT=8080
 JWT_SECRET=guyub-super-secret-jwt-key-2024
 
-# Frontend
+# Frontend Configuration
 FRONTEND_PORT=5173
-"@ | Out-File -FilePath ".env" -Encoding UTF8
-    Write-Host "[OK] Created .env file" -ForegroundColor Green
+"@ | Out-File -FilePath ".env" -Encoding ASCII
+        Write-Host "  Created .env with defaults" -ForegroundColor Green
+    }
 } else {
-    Write-Host "[OK] .env file already exists" -ForegroundColor Green
+    Write-Host "  .env already exists" -ForegroundColor Green
 }
 
-# Step 4: Start containers
-Write-Host "[4/5] Starting services (this may take a few minutes on first run)..." -ForegroundColor Yellow
-Write-Host "    Cleaning up old containers..."
-docker compose down -v 2>$null
-docker-compose down -v 2>$null
-
-Write-Host "    Building and starting containers..."
-try {
-    docker compose up -d --build
-} catch {
-    docker-compose up -d --build
+# Backend .env
+if (-not (Test-Path "backend/.env")) {
+    if (Test-Path "backend/.env.example") {
+        Copy-Item "backend/.env.example" "backend/.env"
+        Write-Host "  Created backend/.env" -ForegroundColor Green
+    }
+} else {
+    Write-Host "  backend/.env already exists" -ForegroundColor Green
 }
 
-# Step 5: Wait for services
-Write-Host "[5/5] Waiting for services to be ready..." -ForegroundColor Yellow
+# Admin/Frontend .env
+if (-not (Test-Path "admin/.env")) {
+    if (Test-Path "admin/.env.example") {
+        Copy-Item "admin/.env.example" "admin/.env"
+        Write-Host "  Created admin/.env" -ForegroundColor Green
+    }
+} else {
+    Write-Host "  admin/.env already exists" -ForegroundColor Green
+}
 
-# Wait for MySQL
-Write-Host "    Waiting for MySQL..." -NoNewline
+# ============================================
+# STEP 3: Stop old containers
+# ============================================
+Write-Host "[3/6] Stopping old containers..." -ForegroundColor Yellow
+docker compose down -v 2>$null | Out-Null
+Write-Host "  Done" -ForegroundColor Green
+
+# ============================================
+# STEP 4: Build and start containers
+# ============================================
+Write-Host "[4/6] Building and starting containers..." -ForegroundColor Yellow
+Write-Host "  This may take 2-5 minutes on first run..." -ForegroundColor Gray
+Write-Host ""
+
+docker compose up -d --build
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Host ""
+    Write-Host "ERROR: Docker compose failed!" -ForegroundColor Red
+    Write-Host "Check the error messages above." -ForegroundColor Yellow
+    Read-Host "Press Enter to exit"
+    exit 1
+}
+
+Write-Host ""
+Write-Host "  Containers started" -ForegroundColor Green
+
+# ============================================
+# STEP 5: Wait for services
+# ============================================
+Write-Host "[5/6] Waiting for services to be ready..." -ForegroundColor Yellow
+
+# Wait for MySQL (max 60 seconds)
+Write-Host "  Waiting for MySQL..." -NoNewline
+$mysqlReady = $false
 for ($i = 0; $i -lt 30; $i++) {
-    try {
-        $result = docker exec guyub-mysql mysqladmin ping -h localhost -u root -prootsecret 2>$null
-        if ($result -match "alive") {
-            Write-Host " [OK]" -ForegroundColor Green
-            break
-        }
-    } catch {}
-    Write-Host "." -NoNewline
+    $result = docker exec guyub-mysql mysqladmin ping -h localhost -u root -prootsecret 2>$null
+    if ($result -match "alive") {
+        $mysqlReady = $true
+        break
+    }
     Start-Sleep -Seconds 2
+    Write-Host "." -NoNewline
+}
+if ($mysqlReady) {
+    Write-Host " OK" -ForegroundColor Green
+} else {
+    Write-Host " TIMEOUT (may still be starting)" -ForegroundColor Yellow
 }
 
-# Wait for Backend
-Write-Host "    Waiting for Backend API..." -NoNewline
+# Wait for Backend (max 60 seconds)
+Write-Host "  Waiting for Backend..." -NoNewline
+$backendReady = $false
 for ($i = 0; $i -lt 30; $i++) {
     try {
         $response = Invoke-WebRequest -Uri "http://localhost:8080/health" -UseBasicParsing -TimeoutSec 2 -ErrorAction SilentlyContinue
         if ($response.StatusCode -eq 200) {
-            Write-Host " [OK]" -ForegroundColor Green
+            $backendReady = $true
             break
         }
     } catch {}
-    Write-Host "." -NoNewline
     Start-Sleep -Seconds 2
+    Write-Host "." -NoNewline
+}
+if ($backendReady) {
+    Write-Host " OK" -ForegroundColor Green
+} else {
+    Write-Host " TIMEOUT (may still be starting)" -ForegroundColor Yellow
 }
 
-# Wait for Frontend
-Write-Host "    Waiting for Frontend..." -NoNewline
+# Wait for Frontend (max 40 seconds)
+Write-Host "  Waiting for Frontend..." -NoNewline
+$frontendReady = $false
 for ($i = 0; $i -lt 20; $i++) {
     try {
         $response = Invoke-WebRequest -Uri "http://localhost:5173" -UseBasicParsing -TimeoutSec 2 -ErrorAction SilentlyContinue
         if ($response.StatusCode -eq 200) {
-            Write-Host " [OK]" -ForegroundColor Green
+            $frontendReady = $true
             break
         }
     } catch {}
-    Write-Host "." -NoNewline
     Start-Sleep -Seconds 2
+    Write-Host "." -NoNewline
+}
+if ($frontendReady) {
+    Write-Host " OK" -ForegroundColor Green
+} else {
+    Write-Host " TIMEOUT (may still be starting)" -ForegroundColor Yellow
 }
 
-# Done!
+# ============================================
+# STEP 6: Done!
+# ============================================
+Write-Host "[6/6] Opening browser..." -ForegroundColor Yellow
+Start-Process "http://localhost:5173"
+
 Write-Host ""
-Write-Host "╔════════════════════════════════════════════╗" -ForegroundColor Green
-Write-Host "║         SETUP COMPLETE!                    ║" -ForegroundColor Green
-Write-Host "╚════════════════════════════════════════════╝" -ForegroundColor Green
+Write-Host "=========================================" -ForegroundColor Green
+Write-Host "  SETUP COMPLETE!" -ForegroundColor Green
+Write-Host "=========================================" -ForegroundColor Green
 Write-Host ""
-Write-Host "Application URLs:" -ForegroundColor Cyan
-Write-Host "   Landing Page  : " -NoNewline; Write-Host "http://localhost:5173/" -ForegroundColor White
-Write-Host "   Login Page    : " -NoNewline; Write-Host "http://localhost:5173/login" -ForegroundColor White
-Write-Host "   Backend API   : " -NoNewline; Write-Host "http://localhost:8080/api/v1" -ForegroundColor White
+Write-Host "URLs:" -ForegroundColor Cyan
+Write-Host "  Landing Page : http://localhost:5173/" -ForegroundColor White
+Write-Host "  Login Page   : http://localhost:5173/login" -ForegroundColor White
+Write-Host "  Backend API  : http://localhost:8080/api/v1" -ForegroundColor White
+Write-Host "  Health Check : http://localhost:8080/health" -ForegroundColor White
 Write-Host ""
 Write-Host "Login Credentials:" -ForegroundColor Cyan
-Write-Host "   Email    : " -NoNewline; Write-Host "admin@guyub.id" -ForegroundColor White
-Write-Host "   Password : " -NoNewline; Write-Host "Admin@123" -ForegroundColor White
+Write-Host "  Email    : admin@guyub.id" -ForegroundColor White
+Write-Host "  Password : Admin@123" -ForegroundColor White
 Write-Host ""
 Write-Host "Useful Commands:" -ForegroundColor Cyan
-Write-Host "   View logs     : docker compose logs -f"
-Write-Host "   Stop all      : docker compose down"
-Write-Host "   Restart       : docker compose restart"
-Write-Host "   Reset DB      : docker compose down -v; docker compose up -d"
+Write-Host "  View logs : docker compose logs -f" -ForegroundColor Gray
+Write-Host "  Stop      : docker compose down" -ForegroundColor Gray
+Write-Host "  Restart   : docker compose restart" -ForegroundColor Gray
+Write-Host "  Reset DB  : docker compose down -v && docker compose up -d" -ForegroundColor Gray
 Write-Host ""
-Write-Host "Happy coding!" -ForegroundColor Yellow
+Write-Host "Happy coding! " -ForegroundColor Yellow
 Write-Host ""
-Read-Host "Press Enter to exit"
+Read-Host "Press Enter to close"
