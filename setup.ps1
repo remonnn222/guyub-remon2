@@ -194,6 +194,26 @@ if ($frontendReady) {
 }
 
 # ============================================
+# STEP 5b: Check if seeder ran (users exist)
+# ============================================
+Write-Host "[5b/6] Verifying database seeder..." -ForegroundColor Yellow
+
+$userCount = docker exec guyub-mysql mysql -u root -prootsecret -N -e "SELECT COUNT(*) FROM guyub.users;" 2>$null
+$userCount = $userCount -replace '\D', ''
+
+if ([string]::IsNullOrEmpty($userCount) -or $userCount -eq "0") {
+    Write-Host "  No users found, running seeder..." -ForegroundColor Yellow
+    Get-Content "backend/migrations/002_seed_data.sql" | docker exec -i guyub-mysql mysql -u root -prootsecret guyub 2>$null
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "  Seeder completed" -ForegroundColor Green
+    } else {
+        Write-Host "  Seeder may have issues - check manually if login fails" -ForegroundColor Yellow
+    }
+} else {
+    Write-Host "  Database already seeded ($userCount users found)" -ForegroundColor Green
+}
+
+# ============================================
 # STEP 6: Done!
 # ============================================
 Write-Host "[6/6] Opening browser..." -ForegroundColor Yellow

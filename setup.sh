@@ -167,6 +167,24 @@ for i in {1..20}; do
 done
 
 # ============================================
+# STEP 5b: Check if seeder ran (users exist)
+# ============================================
+echo -e "${YELLOW}[5b/6] Verifying database seeder...${NC}"
+USER_COUNT=$(docker exec guyub-mysql mysql -u root -prootsecret -N -e "SELECT COUNT(*) FROM guyub.users;" 2>/dev/null || echo "0")
+
+if [ "$USER_COUNT" = "0" ] || [ -z "$USER_COUNT" ]; then
+    echo -e "  ${YELLOW}No users found, running seeder...${NC}"
+    docker exec -i guyub-mysql mysql -u root -prootsecret guyub < backend/migrations/002_seed_data.sql 2>/dev/null
+    if [ $? -eq 0 ]; then
+        echo -e "  ${GREEN}Seeder completed${NC}"
+    else
+        echo -e "  ${RED}Seeder failed - you may need to run manually${NC}"
+    fi
+else
+    echo -e "  ${GREEN}Database already seeded ($USER_COUNT users found)${NC}"
+fi
+
+# ============================================
 # STEP 6: Done!
 # ============================================
 echo -e "${YELLOW}[6/6] Opening browser...${NC}"
