@@ -80,9 +80,14 @@ backend/*.exe
 .parcel-cache/
 
 # ================================
-# AI Development Memory
+# AI Development Memory & Documentation
 # ================================
 CLAUDE.md
+docs/*.md
+docs/**/*.md
+*.md
+!README.md
+!**/README.md
 
 # ================================
 # Misc
