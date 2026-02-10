@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import '../../../../core/di/injection_container.dart';
 import '../../../../core/utils/rate_limiter.dart';
 import '../../domain/entities/user.dart';
 import '../../domain/usecases/login_usecase.dart';
@@ -19,16 +20,21 @@ final loginRateLimiterProvider = Provider<LoginRateLimiter>((ref) {
 /// Manages authentication state using Riverpod
 @riverpod
 class AuthNotifier extends _$AuthNotifier {
+  late final LoginUseCase _loginUseCase;
+  late final LogoutUseCase _logoutUseCase;
+  late final GetCurrentUserUseCase _getCurrentUserUseCase;
+
   @override
   AuthState build() {
+    // Resolve use cases from DI container
+    _loginUseCase = sl<LoginUseCase>();
+    _logoutUseCase = sl<LogoutUseCase>();
+    _getCurrentUserUseCase = sl<GetCurrentUserUseCase>();
+
     // Check initial auth status
     _checkAuthStatus();
     return const AuthState.initial();
   }
-
-  late final LoginUseCase _loginUseCase;
-  late final LogoutUseCase _logoutUseCase;
-  late final GetCurrentUserUseCase _getCurrentUserUseCase;
 
   /// Check if user is authenticated on app start
   Future<void> _checkAuthStatus() async {
