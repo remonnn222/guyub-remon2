@@ -45,5 +45,17 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- Biometric & Security Policies -->
+	<key>NSFaceIDUsageDescription</key>
+	<string>Kami memerlukan akses Face ID untuk autentikasi yang lebih aman pada akun Anda.</string>
+	<key>NSLocalizedDescription</key>
+	<string>Guyub Mobile - Family Tree Platform</string>
+	<!-- Camera Permission for Image Upload -->
+	<key>NSCameraUsageDescription</key>
+	<string>Kami memerlukan akses kamera untuk mengambil dan mengunggah foto profil keluarga.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Kami memerlukan akses ke galeri foto untuk mengunggah gambar keluarga.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Kami memerlukan izin untuk menyimpan foto ke galeri Anda.</string>
 </dict>
 </plist>

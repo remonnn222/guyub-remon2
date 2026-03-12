@@ -3,7 +3,7 @@ class ApiConstants {
   ApiConstants._();
 
   // Base URL - Change based on environment
-  static const String baseUrl = 'http://localhost:8080/api/v1';
+  static const String baseUrl = 'http://127.0.0.1:8080/api/v1';
 
   // Alternative URLs
   static const String localUrl = 'http://localhost:8080/api/v1';

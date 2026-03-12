@@ -25,14 +25,10 @@ Future<void> init() async {
   // ===================
 
   // Storage
-  sl.registerLazySingleton<SecureStorageService>(
-    () => SecureStorageService(),
-  );
+  sl.registerLazySingleton<SecureStorageService>(() => SecureStorageService());
 
   // Token Manager (for JWT validation)
-  sl.registerLazySingleton<TokenManager>(
-    () => TokenManager(storage: sl()),
-  );
+  sl.registerLazySingleton<TokenManager>(() => TokenManager(storage: sl()));
 
   // Biometric Service
   sl.registerLazySingleton<BiometricService>(
@@ -40,9 +36,7 @@ Future<void> init() async {
   );
 
   // Network
-  sl.registerLazySingleton<NetworkInfo>(
-    () => NetworkInfo(),
-  );
+  sl.registerLazySingleton<NetworkInfo>(() => NetworkInfo());
 
   sl.registerLazySingleton<ApiClient>(
     () => ApiClient(
