@@ -32,11 +32,16 @@ class EnvironmentNotifier extends _$EnvironmentNotifier {
 }
 
 /// Settings Page
-class SettingsPage extends ConsumerWidget {
+class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends ConsumerState<SettingsPage> {
+  @override
+  Widget build(BuildContext context) {
     final currentEnv = ref.watch(environmentProvider);
 
     return Scaffold(
