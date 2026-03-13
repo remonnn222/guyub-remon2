@@ -95,3 +95,11 @@ docs/**/*.md
 *.bak
 *.tmp
 *.temp
+
+# ================================
+# Debug/Test files (local only)
+# ================================
+fix_password.sql
+login_request.json
+test_login.ps1
+update_password.bat
