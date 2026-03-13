@@ -27,8 +27,8 @@ storage:
 # CORS: Wildcard "*" is allowed for development only.
 # In production, specify allowed origins explicitly for security.
 cors:
-  allowed_origins:
-    - "*"
+
+  allowed_origins: ["http://127.0.0.1:5173", "http://127.0.0.1:8080", "https://guyub.id"]
   allowed_methods:
     - GET
     - POST
