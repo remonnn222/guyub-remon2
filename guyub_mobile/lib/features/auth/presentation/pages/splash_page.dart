@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/di/injection_container.dart';
+import '../../../../core/security/biometric_service.dart';
 import '../../../../config/theme/app_colors.dart';
 import '../../../../config/theme/app_spacing.dart';
 import '../../../../config/theme/app_typography.dart';
@@ -67,7 +69,26 @@ class _SplashPageState extends ConsumerState<SplashPage>
         // Still checking/loading - wait for state change
         break;
       case AuthStateAuthenticated():
-        context.go('/dashboard');
+        // Check if biometric is enabled and perform biometric auth
+        final biometricService = sl<BiometricService>();
+        final isBiometricEnabled =
+            await biometricService.isBiometricLoginEnabled;
+
+        if (isBiometricEnabled) {
+          final result = await biometricService.authenticate(
+            reason: 'Verifikasi untuk melanjutkan',
+            biometricOnly: true,
+          );
+
+          if (result.isSuccess) {
+            context.go('/dashboard');
+          } else {
+            // Biometric failed, go to login
+            context.go('/login');
+          }
+        } else {
+          context.go('/dashboard');
+        }
       case AuthStateUnauthenticated():
       case AuthStateError():
         context.go('/login');
@@ -83,13 +104,32 @@ class _SplashPageState extends ConsumerState<SplashPage>
   @override
   Widget build(BuildContext context) {
     // Listen to auth state changes
-    ref.listen(authProvider, (previous, next) {
+    ref.listen(authProvider, (previous, next) async {
       switch (next) {
         case AuthStateInitial():
         case AuthStateLoading():
           break;
         case AuthStateAuthenticated():
-          context.go('/dashboard');
+          // Check if biometric is enabled and perform biometric auth
+          final biometricService = sl<BiometricService>();
+          final isBiometricEnabled =
+              await biometricService.isBiometricLoginEnabled;
+
+          if (isBiometricEnabled) {
+            final result = await biometricService.authenticate(
+              reason: 'Verifikasi untuk melanjutkan',
+              biometricOnly: true,
+            );
+
+            if (result.isSuccess) {
+              context.go('/dashboard');
+            } else {
+              // Biometric failed, go to login
+              context.go('/login');
+            }
+          } else {
+            context.go('/dashboard');
+          }
         case AuthStateUnauthenticated():
         case AuthStateError():
           context.go('/login');

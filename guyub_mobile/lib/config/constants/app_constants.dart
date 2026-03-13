@@ -16,6 +16,7 @@ class AppConstants {
   static const String keyLanguage = 'language';
   static const String keyOnboardingComplete = 'onboarding_complete';
   static const String keyLastSync = 'last_sync';
+  static const String keyRememberMe = 'remember_me';
 
   // Database
   static const String dbName = 'guyub_local.db';
@@ -37,7 +38,13 @@ class AppConstants {
   // File Upload
   static const int maxFileSizeMB = 10;
   static const int maxAvatarSizeMB = 5;
-  static const List<String> allowedImageTypes = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+  static const List<String> allowedImageTypes = [
+    'jpg',
+    'jpeg',
+    'png',
+    'gif',
+    'webp',
+  ];
   static const List<String> allowedDocTypes = ['pdf', 'doc', 'docx'];
 
   // Image
@@ -106,14 +113,20 @@ class AppConstants {
 
   // Error Messages (Bahasa Indonesia)
   static const String errorGeneric = 'Terjadi kesalahan. Silakan coba lagi.';
-  static const String errorNetwork = 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
-  static const String errorTimeout = 'Waktu permintaan habis. Silakan coba lagi.';
-  static const String errorUnauthorized = 'Sesi Anda telah berakhir. Silakan login kembali.';
-  static const String errorForbidden = 'Anda tidak memiliki akses ke halaman ini.';
+  static const String errorNetwork =
+      'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
+  static const String errorTimeout =
+      'Waktu permintaan habis. Silakan coba lagi.';
+  static const String errorUnauthorized =
+      'Sesi Anda telah berakhir. Silakan login kembali.';
+  static const String errorForbidden =
+      'Anda tidak memiliki akses ke halaman ini.';
   static const String errorNotFound = 'Data tidak ditemukan.';
   static const String errorServer = 'Terjadi kesalahan pada server.';
-  static const String errorValidation = 'Data tidak valid. Periksa kembali input Anda.';
-  static const String errorOffline = 'Anda sedang offline. Data akan disinkronkan saat online.';
+  static const String errorValidation =
+      'Data tidak valid. Periksa kembali input Anda.';
+  static const String errorOffline =
+      'Anda sedang offline. Data akan disinkronkan saat online.';
 
   // Success Messages
   static const String successSaved = 'Data berhasil disimpan.';
@@ -122,8 +135,11 @@ class AppConstants {
   static const String successSynced = 'Data berhasil disinkronkan.';
 
   // Empty States
-  static const String emptyFamily = 'Belum ada keluarga. Buat keluarga pertama Anda!';
-  static const String emptyPersons = 'Belum ada anggota keluarga. Tambahkan anggota pertama!';
-  static const String emptySearch = 'Tidak ada hasil yang cocok dengan pencarian Anda.';
+  static const String emptyFamily =
+      'Belum ada keluarga. Buat keluarga pertama Anda!';
+  static const String emptyPersons =
+      'Belum ada anggota keluarga. Tambahkan anggota pertama!';
+  static const String emptySearch =
+      'Tidak ada hasil yang cocok dengan pencarian Anda.';
   static const String emptyData = 'Tidak ada data untuk ditampilkan.';
 }

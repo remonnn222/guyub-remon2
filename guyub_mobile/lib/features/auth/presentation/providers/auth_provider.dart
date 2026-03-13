@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:guyub_mobile/core/storage/secure_storage.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/utils/rate_limiter.dart';
@@ -53,7 +54,11 @@ class AuthNotifier extends _$AuthNotifier {
   }
 
   /// Login with email and password
-  Future<void> login(String email, String password) async {
+  Future<void> login(
+    String email,
+    String password, {
+    bool rememberMe = false,
+  }) async {
     state = const AuthState.loading();
 
     final params = LoginParams(email: email, password: password);
@@ -63,9 +68,13 @@ class AuthNotifier extends _$AuthNotifier {
       (failure) {
         state = AuthState.error(failure.message);
       },
-      (data) {
+      (data) async {
         final (_, user) = data;
         state = AuthState.authenticated(user);
+
+        // Save remember me preference
+        final storage = sl<SecureStorageService>();
+        await storage.setRememberMe(rememberMe);
       },
     );
   }
@@ -126,38 +135,26 @@ class AuthNotifier extends _$AuthNotifier {
 @riverpod
 User? currentUser(Ref ref) {
   final authState = ref.watch(authProvider);
-  return authState.maybeWhen(
-    authenticated: (user) => user,
-    orElse: () => null,
-  );
+  return authState.maybeWhen(authenticated: (user) => user, orElse: () => null);
 }
 
 /// Is Authenticated Provider
 @riverpod
 bool isAuthenticated(Ref ref) {
   final authState = ref.watch(authProvider);
-  return authState.maybeWhen(
-    authenticated: (_) => true,
-    orElse: () => false,
-  );
+  return authState.maybeWhen(authenticated: (_) => true, orElse: () => false);
 }
 
 /// Is Loading Provider
 @riverpod
 bool isAuthLoading(Ref ref) {
   final authState = ref.watch(authProvider);
-  return authState.maybeWhen(
-    loading: () => true,
-    orElse: () => false,
-  );
+  return authState.maybeWhen(loading: () => true, orElse: () => false);
 }
 
 /// Auth Error Provider
 @riverpod
 String? authError(Ref ref) {
   final authState = ref.watch(authProvider);
-  return authState.maybeWhen(
-    error: (message) => message,
-    orElse: () => null,
-  );
+  return authState.maybeWhen(error: (message) => message, orElse: () => null);
 }

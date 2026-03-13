@@ -8,14 +8,14 @@ class SecureStorageService {
   final FlutterSecureStorage _storage;
 
   SecureStorageService()
-      : _storage = const FlutterSecureStorage(
-          aOptions: AndroidOptions(
-            // Using default encryption (migrates from deprecated encryptedSharedPreferences)
-          ),
-          iOptions: IOSOptions(
-            accessibility: KeychainAccessibility.first_unlock_this_device,
-          ),
-        );
+    : _storage = const FlutterSecureStorage(
+        aOptions: AndroidOptions(
+          // Using default encryption (migrates from deprecated encryptedSharedPreferences)
+        ),
+        iOptions: IOSOptions(
+          accessibility: KeychainAccessibility.first_unlock_this_device,
+        ),
+      );
 
   // Token Management
 
@@ -51,14 +51,24 @@ class SecureStorageService {
     return token != null && token.isNotEmpty;
   }
 
+  /// Remember Me (keep session after app is closed)
+  Future<bool> getRememberMe() async {
+    final value = await _storage.read(key: AppConstants.keyRememberMe);
+    return value == 'true';
+  }
+
+  Future<void> setRememberMe(bool value) async {
+    await _storage.write(
+      key: AppConstants.keyRememberMe,
+      value: value ? 'true' : 'false',
+    );
+  }
+
   // User Data Management
 
   /// Save user data as JSON
   Future<void> saveUser(Map<String, dynamic> user) async {
-    await _storage.write(
-      key: AppConstants.keyUser,
-      value: jsonEncode(user),
-    );
+    await _storage.write(key: AppConstants.keyUser, value: jsonEncode(user));
   }
 
   /// Get user data
