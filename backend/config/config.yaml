@@ -24,6 +24,8 @@ storage:
   driver: local
   path: ./storage/uploads
 
+# CORS: Wildcard "*" is allowed for development only.
+# In production, specify allowed origins explicitly for security.
 cors:
   allowed_origins:
     - "*"
