@@ -44,9 +44,6 @@ class _GuyubAppState extends ConsumerState<GuyubApp>
     if (!rememberMe) {
       await storage.clearAuthData();
     }
-    if (!rememberMe) {
-      await storage.clearAuthData();
-    }
   }
 
   @override

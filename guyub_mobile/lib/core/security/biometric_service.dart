@@ -4,12 +4,7 @@ import 'package:local_auth/error_codes.dart' as auth_error;
 import '../storage/secure_storage.dart';
 
 /// App-specific Biometric Authentication Type
-enum AppBiometricType {
-  fingerprint,
-  faceId,
-  iris,
-  none,
-}
+enum AppBiometricType { fingerprint, faceId, iris, none }
 
 /// Biometric Authentication Result
 enum BiometricResult {
@@ -35,8 +30,8 @@ class BiometricService {
   BiometricService({
     LocalAuthentication? localAuth,
     required SecureStorageService storage,
-  })  : _localAuth = localAuth ?? LocalAuthentication(),
-        _storage = storage;
+  }) : _localAuth = localAuth ?? LocalAuthentication(),
+       _storage = storage;
 
   /// Check if device supports biometric authentication
   Future<bool> get isSupported async {
@@ -62,16 +57,19 @@ class BiometricService {
   Future<List<AppBiometricType>> getAvailableBiometrics() async {
     try {
       final biometrics = await _localAuth.getAvailableBiometrics();
-      return biometrics.map((b) {
-        if (b == BiometricType.fingerprint) {
-          return AppBiometricType.fingerprint;
-        } else if (b == BiometricType.face) {
-          return AppBiometricType.faceId;
-        } else if (b == BiometricType.iris) {
-          return AppBiometricType.iris;
-        }
-        return AppBiometricType.none;
-      }).where((b) => b != AppBiometricType.none).toList();
+      return biometrics
+          .map((b) {
+            if (b == BiometricType.fingerprint) {
+              return AppBiometricType.fingerprint;
+            } else if (b == BiometricType.face) {
+              return AppBiometricType.faceId;
+            } else if (b == BiometricType.iris) {
+              return AppBiometricType.iris;
+            }
+            return AppBiometricType.none;
+          })
+          .where((b) => b != AppBiometricType.none)
+          .toList();
     } on PlatformException {
       return [];
     }
@@ -121,10 +119,7 @@ class BiometricService {
   }
 
   /// Enable biometric login
-  Future<bool> enableBiometricLogin({
-    required String email,
-    required String password,
-  }) async {
+  Future<bool> enableBiometricLogin({required String refreshToken}) async {
     // First authenticate to confirm identity
     final result = await authenticate(
       reason: 'Verifikasi untuk mengaktifkan login biometrik',
@@ -134,21 +129,39 @@ class BiometricService {
       return false;
     }
 
-    // Store encrypted credentials
+    // Store encrypted refresh token
     await _storage.write(_biometricEnabledKey, 'true');
-    await _storage.write(_biometricCredentialsKey, '$email:$password');
+    await _storage.write(_biometricCredentialsKey, refreshToken);
 
     return true;
   }
 
-  /// Disable biometric login
+  /// Enable biometric login from existing credentials (for settings toggle)
+  Future<bool> enableBiometricLoginFromExisting() async {
+    // Check if credentials already exist
+    if (!await hasBiometricCredentials()) {
+      return false;
+    }
+
+    // Just enable the flag (credentials are already stored)
+    await _storage.write(_biometricEnabledKey, 'true');
+    return true;
+  }
+
+  /// Disable biometric login and remove stored biometric credentials
   Future<void> disableBiometricLogin() async {
     await _storage.delete(_biometricEnabledKey);
     await _storage.delete(_biometricCredentialsKey);
   }
 
-  /// Get stored credentials for biometric login
-  Future<(String email, String password)?> getBiometricCredentials() async {
+  /// Check if biometric credentials are stored
+  Future<bool> hasBiometricCredentials() async {
+    final credentials = await _storage.read(_biometricCredentialsKey);
+    return credentials != null && credentials.isNotEmpty;
+  }
+
+  /// Get stored refresh token for biometric login
+  Future<String?> getBiometricRefreshToken() async {
     // First verify biometric
     final result = await authenticate(
       reason: 'Masuk dengan biometrik',
@@ -159,14 +172,9 @@ class BiometricService {
       return null;
     }
 
-    // Get stored credentials
-    final credentials = await _storage.read(_biometricCredentialsKey);
-    if (credentials == null) return null;
-
-    final parts = credentials.split(':');
-    if (parts.length != 2) return null;
-
-    return (parts[0], parts[1]);
+    // Get stored refresh token
+    final refreshToken = await _storage.read(_biometricCredentialsKey);
+    return refreshToken;
   }
 
   /// Cancel any ongoing authentication

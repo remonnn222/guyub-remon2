@@ -40,6 +40,46 @@ class SettingsPage extends ConsumerStatefulWidget {
 }
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
+  late Future<
+    (
+      bool isSupported,
+      bool isEnabled,
+      List<AppBiometricType> biometrics,
+      bool hasCredentials,
+    )
+  >
+  _biometricSettingsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _biometricSettingsFuture = _loadBiometricSettings();
+  }
+
+  Future<
+    (
+      bool isSupported,
+      bool isEnabled,
+      List<AppBiometricType> biometrics,
+      bool hasCredentials,
+    )
+  >
+  _loadBiometricSettings() async {
+    final biometricService = sl<BiometricService>();
+    final results = await Future.wait([
+      biometricService.isSupported,
+      biometricService.isBiometricLoginEnabled,
+      biometricService.getAvailableBiometrics(),
+      biometricService.hasBiometricCredentials(),
+    ]);
+    return (
+      results[0] as bool,
+      results[1] as bool,
+      results[2] as List<AppBiometricType>,
+      results[3] as bool,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentEnv = ref.watch(environmentProvider);
@@ -166,120 +206,124 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           // Biometric Settings Section
           const _SectionHeader(title: 'Keamanan'),
           Card(
-            child: Column(
-              children: [
-                FutureBuilder<bool>(
-                  future: sl<BiometricService>().isSupported,
-                  builder: (context, supportedSnapshot) {
-                    final isSupported = supportedSnapshot.data ?? false;
+            child:
+                FutureBuilder<
+                  (
+                    bool isSupported,
+                    bool isEnabled,
+                    List<AppBiometricType> biometrics,
+                    bool hasCredentials,
+                  )
+                >(
+                  future: _biometricSettingsFuture,
+                  builder: (context, snapshot) {
+                    final isSupported = snapshot.data?.$1 ?? false;
+                    final isEnabled = snapshot.data?.$2 ?? false;
+                    final biometrics = snapshot.data?.$3 ?? [];
+                    final hasCredentials = snapshot.data?.$4 ?? false;
 
-                    return FutureBuilder<bool>(
-                      future: sl<BiometricService>().isBiometricLoginEnabled,
-                      builder: (context, enabledSnapshot) {
-                        final isEnabled = enabledSnapshot.data ?? false;
+                    final biometricNames = biometrics
+                        .map((b) {
+                          switch (b) {
+                            case AppBiometricType.fingerprint:
+                              return 'Sidik Jari';
+                            case AppBiometricType.faceId:
+                              return 'Face ID';
+                            case AppBiometricType.iris:
+                              return 'Iris';
+                            default:
+                              return 'Biometrik';
+                          }
+                        })
+                        .join(', ');
 
-                        return Column(
-                          children: [
-                            ListTile(
-                              leading: const Icon(Icons.fingerprint),
-                              title: const Text('Login Biometrik'),
-                              subtitle: Text(
-                                isSupported
-                                    ? (isEnabled
-                                          ? 'Diaktifkan'
-                                          : 'Dinonaktifkan')
-                                    : 'Tidak didukung perangkat',
-                              ),
-                              trailing: isSupported
-                                  ? Switch(
-                                      value: isEnabled,
-                                      onChanged: (value) async {
-                                        final biometricService =
-                                            sl<BiometricService>();
-                                        if (value) {
-                                          // Enable biometric
-                                          final result = await biometricService
-                                              .authenticate(
-                                                reason:
-                                                    'Aktifkan login biometrik',
-                                              );
-                                          if (result.isSuccess) {
-                                            // Note: Enabling requires credentials, but for settings we assume it's already set
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              const SnackBar(
-                                                content: Text(
-                                                  'Login biometrik diaktifkan',
-                                                ),
-                                              ),
-                                            );
-                                          }
-                                        } else {
-                                          // Disable biometric
-                                          await biometricService
-                                              .disableBiometricLogin();
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            const SnackBar(
-                                              content: Text(
-                                                'Login biometrik dinonaktifkan',
-                                              ),
-                                            ),
+                    return Column(
+                      children: [
+                        ListTile(
+                          leading: const Icon(Icons.fingerprint),
+                          title: const Text('Login Biometrik'),
+                          subtitle: Text(
+                            isSupported
+                                ? (isEnabled
+                                      ? 'Diaktifkan'
+                                      : hasCredentials
+                                      ? 'Dinonaktifkan'
+                                      : 'Belum diatur - login dulu')
+                                : 'Tidak didukung perangkat',
+                          ),
+                          trailing: isSupported && hasCredentials
+                              ? Switch(
+                                  value: isEnabled,
+                                  onChanged: (value) async {
+                                    final biometricService =
+                                        sl<BiometricService>();
+                                    if (value) {
+                                      // Enable biometric
+                                      final result = await biometricService
+                                          .authenticate(
+                                            reason: 'Aktifkan login biometrik',
                                           );
-                                        }
-                                        setState(() {}); // Refresh UI
-                                      },
-                                      activeColor: AppColors.primary,
-                                    )
-                                  : const Icon(
-                                      Icons.block,
-                                      color: AppColors.textSecondary,
-                                    ),
+                                      if (result.isSuccess) {
+                                        // Enable biometric login (credentials already exist)
+                                        await biometricService
+                                            .enableBiometricLoginFromExisting();
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              'Login biometrik diaktifkan',
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    } else {
+                                      // Disable biometric
+                                      await biometricService
+                                          .disableBiometricLogin();
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Login biometrik dinonaktifkan',
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                    setState(() {
+                                      _biometricSettingsFuture =
+                                          _loadBiometricSettings();
+                                    }); // Refresh UI
+                                  },
+                                  activeColor: AppColors.primary,
+                                )
+                              : isSupported && !hasCredentials
+                              ? const Icon(
+                                  Icons.info_outline,
+                                  color: AppColors.textSecondary,
+                                )
+                              : const Icon(
+                                  Icons.block,
+                                  color: AppColors.textSecondary,
+                                ),
+                        ),
+                        if (isSupported) ...[
+                          const Divider(height: 1),
+                          ListTile(
+                            leading: const Icon(Icons.info_outline),
+                            title: const Text('Tipe Biometrik'),
+                            subtitle: Text(
+                              biometricNames.isNotEmpty
+                                  ? biometricNames
+                                  : 'Tidak tersedia',
                             ),
-                            if (isSupported) ...[
-                              const Divider(height: 1),
-                              FutureBuilder<List<AppBiometricType>>(
-                                future: sl<BiometricService>()
-                                    .getAvailableBiometrics(),
-                                builder: (context, bioSnapshot) {
-                                  final biometrics = bioSnapshot.data ?? [];
-                                  final biometricNames = biometrics
-                                      .map((b) {
-                                        switch (b) {
-                                          case AppBiometricType.fingerprint:
-                                            return 'Sidik Jari';
-                                          case AppBiometricType.faceId:
-                                            return 'Face ID';
-                                          case AppBiometricType.iris:
-                                            return 'Iris';
-                                          default:
-                                            return 'Biometrik';
-                                        }
-                                      })
-                                      .join(', ');
-
-                                  return ListTile(
-                                    leading: const Icon(Icons.info_outline),
-                                    title: const Text('Tipe Biometrik'),
-                                    subtitle: Text(
-                                      biometricNames.isNotEmpty
-                                          ? biometricNames
-                                          : 'Tidak tersedia',
-                                    ),
-                                  );
-                                },
-                              ),
-                            ],
-                          ],
-                        );
-                      },
+                          ),
+                        ],
+                      ],
                     );
                   },
                 ),
-              ],
-            ),
           ),
 
           AppSpacing.verticalXL,

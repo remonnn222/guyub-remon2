@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:guyub_mobile/core/storage/secure_storage.dart';
+import 'package:guyub_mobile/core/storage/token_manager.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/utils/rate_limiter.dart';
@@ -7,6 +8,7 @@ import '../../domain/entities/user.dart';
 import '../../domain/usecases/login_usecase.dart';
 import '../../domain/usecases/logout_usecase.dart';
 import '../../domain/usecases/get_current_user_usecase.dart';
+import '../../domain/usecases/refresh_token_usecase.dart';
 import 'auth_state.dart';
 
 part 'auth_provider.g.dart';
@@ -24,6 +26,7 @@ class AuthNotifier extends _$AuthNotifier {
   late final LoginUseCase _loginUseCase;
   late final LogoutUseCase _logoutUseCase;
   late final GetCurrentUserUseCase _getCurrentUserUseCase;
+  late final RefreshTokenUseCase _refreshTokenUseCase;
 
   @override
   AuthState build() {
@@ -31,6 +34,7 @@ class AuthNotifier extends _$AuthNotifier {
     _loginUseCase = sl<LoginUseCase>();
     _logoutUseCase = sl<LogoutUseCase>();
     _getCurrentUserUseCase = sl<GetCurrentUserUseCase>();
+    _refreshTokenUseCase = sl<RefreshTokenUseCase>();
 
     // Check initial auth status
     _checkAuthStatus();
@@ -41,15 +45,47 @@ class AuthNotifier extends _$AuthNotifier {
   Future<void> _checkAuthStatus() async {
     state = const AuthState.loading();
 
-    final result = await _getCurrentUserUseCase();
+    final storage = sl<SecureStorageService>();
+    final tokenManager = sl<TokenManager>();
 
+    final rememberMe = await storage.getRememberMe();
+    if (!rememberMe) {
+      // Clear any stored tokens when the user chose not to stay logged in
+      await storage.clearTokens();
+      state = const AuthState.unauthenticated();
+      return;
+    }
+
+    // Ensure we have valid tokens before attempting to load the user
+    final tokenStatus = await tokenManager.getTokenStatus();
+    if (tokenStatus.needsLogin) {
+      state = const AuthState.unauthenticated();
+      return;
+    }
+
+    if (tokenStatus.needsRefresh) {
+      // Attempt a refresh token flow before proceeding
+      final refreshResult = await _refreshTokenUseCase();
+      await refreshResult.fold(
+        (_) async {
+          state = const AuthState.unauthenticated();
+        },
+        (_) async {
+          final userResult = await _getCurrentUserUseCase();
+          userResult.fold(
+            (_) => state = const AuthState.unauthenticated(),
+            (user) => state = AuthState.authenticated(user),
+          );
+        },
+      );
+      return;
+    }
+
+    // Tokens appear valid, load current user (cached or remote)
+    final result = await _getCurrentUserUseCase();
     result.fold(
-      (failure) {
-        state = const AuthState.unauthenticated();
-      },
-      (user) {
-        state = AuthState.authenticated(user);
-      },
+      (_) => state = const AuthState.unauthenticated(),
+      (user) => state = AuthState.authenticated(user),
     );
   }
 
@@ -96,23 +132,27 @@ class AuthNotifier extends _$AuthNotifier {
     );
   }
 
-  /// Refresh user data
-  Future<void> refreshUser() async {
-    final currentUser = state.maybeWhen(
-      authenticated: (user) => user,
-      orElse: () => null,
-    );
+  /// Login with refresh token (for biometric authentication)
+  Future<void> loginWithRefreshToken() async {
+    state = const AuthState.loading();
 
-    if (currentUser == null) return;
-
-    final result = await _getCurrentUserUseCase();
+    final result = await _refreshTokenUseCase();
 
     result.fold(
       (failure) {
-        // Keep current state on failure
+        state = AuthState.error(failure.message);
       },
-      (user) {
-        state = AuthState.authenticated(user);
+      (tokens) async {
+        // Get user data after successful token refresh
+        final userResult = await _getCurrentUserUseCase();
+        userResult.fold(
+          (userFailure) {
+            state = AuthState.error(userFailure.message);
+          },
+          (user) {
+            state = AuthState.authenticated(user);
+          },
+        );
       },
     );
   }

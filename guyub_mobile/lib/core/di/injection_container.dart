@@ -10,6 +10,7 @@ import '../../features/auth/domain/repositories/auth_repository.dart';
 import '../../features/auth/domain/usecases/login_usecase.dart';
 import '../../features/auth/domain/usecases/logout_usecase.dart';
 import '../../features/auth/domain/usecases/get_current_user_usecase.dart';
+import '../../features/auth/domain/usecases/refresh_token_usecase.dart';
 import '../../features/family/data/datasources/family_remote_datasource.dart';
 import '../../features/family/data/datasources/family_local_datasource.dart';
 import '../../features/family/data/repositories/family_repository_impl.dart';
@@ -73,6 +74,7 @@ Future<void> init() async {
   sl.registerLazySingleton(() => LoginUseCase(sl()));
   sl.registerLazySingleton(() => LogoutUseCase(sl()));
   sl.registerLazySingleton(() => GetCurrentUserUseCase(sl()));
+  sl.registerLazySingleton(() => RefreshTokenUseCase(sl()));
 
   // ===================
   // FAMILY FEATURE

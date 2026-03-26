@@ -7,6 +7,7 @@ import '../../../../config/theme/app_typography.dart';
 import '../../../../core/utils/input_sanitizer.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/security/biometric_service.dart';
+import '../../../../core/storage/secure_storage.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../shared/widgets/loading_overlay.dart';
@@ -27,6 +28,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _rememberMe = false;
+  late Future<bool> _biometricEnabledFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _biometricEnabledFuture = sl<BiometricService>().isBiometricLoginEnabled;
+  }
 
   @override
   void dispose() {
@@ -95,16 +103,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     );
 
     if (result.isSuccess) {
-      // Get stored credentials and login
-      final credentials = await biometricService.getBiometricCredentials();
-      if (credentials != null) {
-        final (email, password) = credentials;
-        ref
-            .read(authProvider.notifier)
-            .login(email, password, rememberMe: true);
+      // Get stored refresh token and login
+      final refreshToken = await biometricService.getBiometricRefreshToken();
+      if (refreshToken != null) {
+        ref.read(authProvider.notifier).loginWithRefreshToken();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Kredensial biometrik tidak ditemukan')),
+          const SnackBar(content: Text('Token biometrik tidak ditemukan')),
         );
       }
     } else {
@@ -117,33 +122,43 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     }
   }
 
+  Future<void> _onAuthenticated() async {
+    if (!mounted) return;
+
+    // Reset rate limiter on successful login
+    ref.read(loginRateLimiterProvider).reset();
+
+    // Check if biometric should be offered
+    final biometricService = sl<BiometricService>();
+    final isSupported = await biometricService.isSupported;
+    final isEnabled = await biometricService.isBiometricLoginEnabled;
+
+    if (isSupported && !isEnabled) {
+      // Get refresh token and show biometric enable dialog
+      final storage = sl<SecureStorageService>();
+      final refreshToken = await storage.getRefreshToken();
+      if (refreshToken != null && mounted) {
+        // Show biometric enable dialog
+        await _showEnableBiometricDialog(context, refreshToken);
+      } else if (mounted) {
+        // Navigate to dashboard
+        context.go('/dashboard');
+      }
+    } else if (mounted) {
+      // Navigate to dashboard
+      context.go('/dashboard');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isLoading = ref.watch(isAuthLoadingProvider);
     final error = ref.watch(authErrorProvider);
 
     // Navigate on successful login and reset rate limiter
-    ref.listen(authProvider, (previous, next) async {
+    ref.listen<AuthState>(authProvider, (previous, next) {
       if (next is AuthStateAuthenticated) {
-        // Reset rate limiter on successful login
-        ref.read(loginRateLimiterProvider).reset();
-
-        // Check if biometric should be offered
-        final biometricService = sl<BiometricService>();
-        final isSupported = await biometricService.isSupported;
-        final isEnabled = await biometricService.isBiometricLoginEnabled;
-
-        if (isSupported && !isEnabled) {
-          // Show biometric enable dialog
-          _showEnableBiometricDialog(
-            context,
-            _emailController.text,
-            _passwordController.text,
-          );
-        } else {
-          // Navigate to dashboard
-          context.go('/dashboard');
-        }
+        _onAuthenticated();
       }
     });
 
@@ -192,7 +207,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
                       // Biometric Login Button
                       FutureBuilder<bool>(
-                        future: sl<BiometricService>().isBiometricLoginEnabled,
+                        future: _biometricEnabledFuture,
                         builder: (context, snapshot) {
                           if (snapshot.data == true) {
                             return Column(
@@ -390,8 +405,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   Future<void> _showEnableBiometricDialog(
     BuildContext context,
-    String email,
-    String password,
+    String refreshToken,
   ) async {
     final biometricService = sl<BiometricService>();
     final availableBiometrics = await biometricService.getAvailableBiometrics();
@@ -424,8 +438,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
     if (result == true) {
       final enableResult = await biometricService.enableBiometricLogin(
-        email: email,
-        password: password,
+        refreshToken: refreshToken,
       );
 
       if (enableResult) {
@@ -443,6 +456,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     }
 
     // Navigate to dashboard regardless
-    context.go('/dashboard');
+    if (mounted) {
+      context.go('/dashboard');
+    }
   }
 }

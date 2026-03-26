@@ -69,29 +69,48 @@ class _SplashPageState extends ConsumerState<SplashPage>
         // Still checking/loading - wait for state change
         break;
       case AuthStateAuthenticated():
-        // Check if biometric is enabled and perform biometric auth
+        await _handleBiometricAuthAndNavigate();
+        break;
+      case AuthStateUnauthenticated():
+      case AuthStateError():
+        // If biometric login is enabled, try to authenticate with stored refresh token
         final biometricService = sl<BiometricService>();
         final isBiometricEnabled =
             await biometricService.isBiometricLoginEnabled;
-
         if (isBiometricEnabled) {
-          final result = await biometricService.authenticate(
-            reason: 'Verifikasi untuk melanjutkan',
-            biometricOnly: true,
-          );
-
-          if (result.isSuccess) {
-            context.go('/dashboard');
-          } else {
-            // Biometric failed, go to login
-            context.go('/login');
+          final refreshToken = await biometricService
+              .getBiometricRefreshToken();
+          if (refreshToken != null) {
+            // Attempt to log in via refresh token
+            await ref.read(authProvider.notifier).loginWithRefreshToken();
+            return;
           }
-        } else {
-          context.go('/dashboard');
         }
-      case AuthStateUnauthenticated():
-      case AuthStateError():
+
+        if (!mounted) return;
         context.go('/login');
+    }
+  }
+
+  Future<void> _handleBiometricAuthAndNavigate() async {
+    // Check if biometric is enabled and perform biometric auth
+    final biometricService = sl<BiometricService>();
+    final isBiometricEnabled = await biometricService.isBiometricLoginEnabled;
+
+    if (isBiometricEnabled) {
+      final result = await biometricService.authenticate(
+        reason: 'Verifikasi untuk melanjutkan',
+        biometricOnly: true,
+      );
+
+      if (result.isSuccess) {
+        context.go('/dashboard');
+      } else {
+        // Biometric failed, go to login
+        context.go('/login');
+      }
+    } else {
+      context.go('/dashboard');
     }
   }
 
@@ -110,28 +129,11 @@ class _SplashPageState extends ConsumerState<SplashPage>
         case AuthStateLoading():
           break;
         case AuthStateAuthenticated():
-          // Check if biometric is enabled and perform biometric auth
-          final biometricService = sl<BiometricService>();
-          final isBiometricEnabled =
-              await biometricService.isBiometricLoginEnabled;
-
-          if (isBiometricEnabled) {
-            final result = await biometricService.authenticate(
-              reason: 'Verifikasi untuk melanjutkan',
-              biometricOnly: true,
-            );
-
-            if (result.isSuccess) {
-              context.go('/dashboard');
-            } else {
-              // Biometric failed, go to login
-              context.go('/login');
-            }
-          } else {
-            context.go('/dashboard');
-          }
+          await _handleBiometricAuthAndNavigate();
+          break;
         case AuthStateUnauthenticated():
         case AuthStateError():
+          if (!mounted) return;
           context.go('/login');
       }
     });
