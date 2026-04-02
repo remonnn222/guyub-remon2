@@ -40,7 +40,7 @@ abstract class EventRepository {
 class CreateEventParams {
   final String title;
   final String description;
-  final String type; // event_type value
+  final String type;
   final int? familyId;
   final String startDate;
   final String? endDate;
@@ -59,6 +59,20 @@ class CreateEventParams {
     this.locationAddress,
     required this.participantIds,
   });
+
+  factory CreateEventParams.fromJson(Map<String, dynamic> json) {
+    return CreateEventParams(
+      title: json['title'] as String,
+      description: json['description'] as String,
+      type: json['type'] as String,
+      familyId: json['family_id'] as int?,
+      startDate: json['start_date'] as String,
+      endDate: json['end_date'] as String?,
+      location: json['location'] as String,
+      locationAddress: json['location_address'] as String?,
+      participantIds: (json['participant_ids'] as List<dynamic>).cast<int>(),
+    );
+  }
 
   Map<String, dynamic> toJson() => {
     'title': title,
@@ -95,6 +109,22 @@ class UpdateEventParams {
     this.locationAddress,
     this.participantIds,
   });
+
+  factory UpdateEventParams.fromJson(Map<String, dynamic> json) {
+    return UpdateEventParams(
+      title: json['title'] as String?,
+      description: json['description'] as String?,
+      type: json['type'] as String?,
+      familyId: json['family_id'] as int?,
+      startDate: json['start_date'] as String?,
+      endDate: json['end_date'] as String?,
+      location: json['location'] as String?,
+      locationAddress: json['location_address'] as String?,
+      participantIds: json['participant_ids'] != null
+          ? (json['participant_ids'] as List<dynamic>).cast<int>()
+          : null,
+    );
+  }
 
   Map<String, dynamic> toJson() => {
     if (title != null) 'title': title,

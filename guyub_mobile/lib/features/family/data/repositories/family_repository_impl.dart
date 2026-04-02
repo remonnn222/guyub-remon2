@@ -528,6 +528,9 @@ class FamilyRepositoryImpl implements FamilyRepository {
       case SyncEntityType.treePosition:
         await _syncTreePositions(item);
         break;
+      case SyncEntityType.event:
+        // Events are handled by EventRepository, skip here
+        break;
     }
   }
 

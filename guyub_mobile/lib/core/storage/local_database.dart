@@ -122,17 +122,58 @@ class LocalDatabase {
       )
     ''');
 
+    // Events table
+    await db.execute('''
+      CREATE TABLE events (
+        id INTEGER PRIMARY KEY,
+        title TEXT NOT NULL,
+        description TEXT,
+        type TEXT NOT NULL,
+        status TEXT NOT NULL,
+        family_id INTEGER,
+        start_date TEXT NOT NULL,
+        end_date TEXT,
+        location TEXT NOT NULL,
+        location_address TEXT,
+        participant_ids TEXT,
+        created_by INTEGER,
+        created_at TEXT,
+        updated_at TEXT,
+        pending_sync INTEGER NOT NULL DEFAULT 0,
+        synced_at TEXT
+      )
+    ''');
+
     // Create indexes
     await db.execute('CREATE INDEX idx_persons_family ON persons (family_id)');
-    await db.execute('CREATE INDEX idx_relationships_person ON relationships (person_id)');
-    await db.execute('CREATE INDEX idx_relationships_related ON relationships (related_person_id)');
-    await db.execute('CREATE INDEX idx_tree_positions_person ON tree_positions (person_id)');
-    await db.execute('CREATE INDEX idx_tree_positions_family ON tree_positions (family_id)');
-    await db.execute('CREATE INDEX idx_sync_queue_status ON sync_queue (status)');
+    await db.execute(
+      'CREATE INDEX idx_relationships_person ON relationships (person_id)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_relationships_related ON relationships (related_person_id)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_tree_positions_person ON tree_positions (person_id)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_tree_positions_family ON tree_positions (family_id)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_sync_queue_status ON sync_queue (status)',
+    );
+    await db.execute('CREATE INDEX idx_events_family ON events (family_id)');
+    await db.execute('CREATE INDEX idx_events_status ON events (status)');
+    await db.execute(
+      'CREATE INDEX idx_events_start_date ON events (start_date)',
+    );
   }
 
   /// Handle database upgrades
-  static Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+  static Future<void> _onUpgrade(
+    Database db,
+    int oldVersion,
+    int newVersion,
+  ) async {
     // Handle future migrations here
   }
 
@@ -152,23 +193,15 @@ class LocalDatabase {
     await db.delete('relationships');
     await db.delete('persons');
     await db.delete('families');
+    await db.delete('events');
   }
 }
 
 /// Sync Action Types
-enum SyncAction {
-  create,
-  update,
-  delete,
-}
+enum SyncAction { create, update, delete }
 
 /// Sync Entity Types
-enum SyncEntityType {
-  family,
-  person,
-  relationship,
-  treePosition,
-}
+enum SyncEntityType { family, person, relationship, treePosition, event }
 
 /// Sync Queue Item
 class SyncQueueItem {
@@ -195,14 +228,14 @@ class SyncQueueItem {
   });
 
   Map<String, dynamic> toMap() => {
-        if (id != null) 'id': id,
-        'action': action.name,
-        'entity_type': entityType.name,
-        'entity_id': entityId,
-        'payload': payload.toString(),
-        'created_at': createdAt.toIso8601String(),
-        'status': status,
-        'error_message': errorMessage,
-        'retry_count': retryCount,
-      };
+    if (id != null) 'id': id,
+    'action': action.name,
+    'entity_type': entityType.name,
+    'entity_id': entityId,
+    'payload': payload.toString(),
+    'created_at': createdAt.toIso8601String(),
+    'status': status,
+    'error_message': errorMessage,
+    'retry_count': retryCount,
+  };
 }

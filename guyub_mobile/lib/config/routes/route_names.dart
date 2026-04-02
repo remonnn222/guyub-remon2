@@ -38,6 +38,12 @@ class RouteNames {
   static const String roles = '/roles';
   static const String roleDetail = '/roles/:id';
 
+  // Events
+  static const String events = '/events';
+  static const String eventDetail = '/events/:id';
+  static const String eventCreate = '/events/create';
+  static const String eventEdit = '/events/:id/edit';
+
   /// Build path with parameters
   static String buildPath(String path, Map<String, String> params) {
     String result = path;

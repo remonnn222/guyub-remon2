@@ -1,33 +1,18 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../core/di/injection_container.dart';
-import '../../domain/entities/event.dart';
 import '../../domain/repositories/event_repository.dart';
-
-
-part 'event_provider.g.dart';
+import '../event_state.dart';
 
 /// Event Repository Provider
 final eventRepositoryProvider = Provider<EventRepository>((ref) {
   return sl<EventRepository>();
 });
 
-/// Pending sync count provider
-final eventPendingSyncCountProvider = StreamProvider<int>((ref) async* {
-  final repository = ref.read(eventRepositoryProvider);
-  while (true) {
-    final result = await repository.getPendingSyncCount();
-    yield result.fold((_) => 0, (count) => count);
-    await Future.delayed(const Duration(seconds: 3));
-  }
-});
-
 /// Event List Notifier
-@riverpod
-class EventListNotifier extends _$EventListNotifier {
+class EventListNotifier extends Notifier<EventListState> {
   @override
   EventListState build() {
-    loadEvents();
+    Future.microtask(() => loadEvents());
     return const EventListInitial();
   }
 
@@ -80,9 +65,15 @@ class EventListNotifier extends _$EventListNotifier {
   }
 }
 
+/// Event List Provider
+final eventListProvider = NotifierProvider<EventListNotifier, EventListState>(
+  () {
+    return EventListNotifier();
+  },
+);
+
 /// Event Detail Notifier
-@riverpod
-class EventDetailNotifier extends _$EventDetailNotifier {
+class EventDetailNotifier extends Notifier<EventDetailState> {
   int? _currentEventId;
 
   @override
@@ -137,9 +128,14 @@ class EventDetailNotifier extends _$EventDetailNotifier {
   }
 }
 
-/// Event Form Notifier (Create/Edit)
-@riverpod
-class EventFormNotifier extends _$EventFormNotifier {
+/// Event Detail Provider
+final eventDetailProvider =
+    NotifierProvider<EventDetailNotifier, EventDetailState>(() {
+      return EventDetailNotifier();
+    });
+
+/// Event Form Notifier
+class EventFormNotifier extends Notifier<EventFormState> {
   @override
   EventFormState build() => const EventFormInitial();
 
@@ -178,9 +174,15 @@ class EventFormNotifier extends _$EventFormNotifier {
   }
 }
 
+/// Event Form Provider
+final eventFormProvider = NotifierProvider<EventFormNotifier, EventFormState>(
+  () {
+    return EventFormNotifier();
+  },
+);
+
 /// Event Sync Notifier
-@riverpod
-class EventSyncNotifier extends _$EventSyncNotifier {
+class EventSyncNotifier extends Notifier<EventSyncState> {
   @override
   EventSyncState build() => const EventSyncInitial();
 
@@ -197,3 +199,20 @@ class EventSyncNotifier extends _$EventSyncNotifier {
     );
   }
 }
+
+/// Event Sync Provider
+final eventSyncProvider = NotifierProvider<EventSyncNotifier, EventSyncState>(
+  () {
+    return EventSyncNotifier();
+  },
+);
+
+/// Pending sync count provider
+final eventPendingSyncCountProvider = StreamProvider<int>((ref) async* {
+  final repository = ref.read(eventRepositoryProvider);
+  while (true) {
+    final result = await repository.getPendingSyncCount();
+    yield result.fold((_) => 0, (count) => count);
+    await Future.delayed(const Duration(seconds: 3));
+  }
+});

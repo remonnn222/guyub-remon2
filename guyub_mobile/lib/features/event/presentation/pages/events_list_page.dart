@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../config/theme/app_colors.dart';
 import '../../../../config/theme/app_spacing.dart';
-import '../../../../config/routes/route_names.dart';
-import '../../../../core/di/injection_container.dart';
 import '../../../auth/domain/entities/user.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../domain/entities/event.dart';
-import '../../domain/usecases/create_event_usecase.dart';
 import '../providers/event_provider.dart';
 import '../event_state.dart';
-
 
 class EventsListPage extends ConsumerStatefulWidget {
   const EventsListPage({super.key});
@@ -161,16 +158,26 @@ class _EventsListPageState extends ConsumerState<EventsListPage>
   }
 
   Widget _buildStatusBadge(EventStatus status) {
+    final Color badgeColor = switch (status.badgeColorClass) {
+      'grey' => Colors.grey,
+      'orange' => Colors.orange,
+      'green' => Colors.green,
+      'blue' => Colors.blue,
+      'purple' => Colors.purple,
+      'red' => Colors.red,
+      _ => Colors.grey,
+    };
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors[status.badgeColorClass]?.withValues(alpha: 0.2),
+        color: badgeColor.withOpacity(0.2),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
         status.displayName,
         style: TextStyle(
-          color: AppColors[status.badgeColorClass],
+          color: badgeColor,
           fontSize: 12,
           fontWeight: FontWeight.w500,
         ),

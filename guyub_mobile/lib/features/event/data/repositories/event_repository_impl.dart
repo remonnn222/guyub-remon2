@@ -1,7 +1,5 @@
 import 'dart:math' as math;
 import 'package:dartz/dartz.dart';
-import 'package:guyub_mobile/core/storage/local_database.dart';
-import 'package:guyub_mobile/core/storage/local_database.dart' as LocalDatabase;
 import '../../../../core/error/failures.dart';
 import '../../../../core/error/exceptions.dart';
 import '../../../../core/network/network_info.dart';
@@ -120,19 +118,24 @@ class EventRepositoryImpl implements EventRepository {
     } else {
       // Queue offline
       await localDataSource.addToSyncQueue(
-        LocalDatabase.SyncQueueItem(
-          action: LocalDatabase.SyncAction.create,
-          entityType: LocalDatabase.SyncEntityType.event,
+        SyncQueueItem(
+          action: SyncAction.create,
+          entityType: SyncEntityType.event,
           payload: params.toJson(),
           createdAt: DateTime.now(),
         ),
       );
-      return const Left(NetworkFailure(message: 'Offline: Event queued for sync'));
+      return const Left(
+        NetworkFailure(message: 'Offline: Event queued for sync'),
+      );
     }
   }
 
   @override
-  Future<Either<Failure, Event>> updateEvent(int id, UpdateEventParams params) async {
+  Future<Either<Failure, Event>> updateEvent(
+    int id,
+    UpdateEventParams params,
+  ) async {
     if (await networkInfo.isConnected) {
       try {
         final remoteEvent = await remoteDataSource.updateEvent(id, params);
@@ -143,15 +146,17 @@ class EventRepositoryImpl implements EventRepository {
       }
     } else {
       await localDataSource.addToSyncQueue(
-        LocalDatabase.SyncQueueItem(
-          action: LocalDatabase.SyncAction.update,
-          entityType: LocalDatabase.SyncEntityType.event,
+        SyncQueueItem(
+          action: SyncAction.update,
+          entityType: SyncEntityType.event,
           entityId: id,
           payload: params.toJson(),
           createdAt: DateTime.now(),
         ),
       );
-      return const Left(NetworkFailure(message: 'Offline: Event queued for sync'));
+      return const Left(
+        NetworkFailure(message: 'Offline: Event queued for sync'),
+      );
     }
   }
 
@@ -167,9 +172,9 @@ class EventRepositoryImpl implements EventRepository {
       }
     } else {
       await localDataSource.addToSyncQueue(
-        LocalDatabase.SyncQueueItem(
-          action: LocalDatabase.SyncAction.delete,
-          entityType: LocalDatabase.SyncEntityType.event,
+        SyncQueueItem(
+          action: SyncAction.delete,
+          entityType: SyncEntityType.event,
           entityId: id,
           payload: {'id': id},
           createdAt: DateTime.now(),
@@ -191,7 +196,9 @@ class EventRepositoryImpl implements EventRepository {
         return Left(_handleError(e));
       }
     }
-    return const Left(NetworkFailure(message: 'Internet required to approve event'));
+    return const Left(
+      NetworkFailure(message: 'Internet required to approve event'),
+    );
   }
 
   @override
@@ -205,7 +212,9 @@ class EventRepositoryImpl implements EventRepository {
         return Left(_handleError(e));
       }
     }
-    return const Left(NetworkFailure(message: 'Internet required to reject event'));
+    return const Left(
+      NetworkFailure(message: 'Internet required to reject event'),
+    );
   }
 
   @override
@@ -227,9 +236,9 @@ class EventRepositoryImpl implements EventRepository {
 
         try {
           await _processSyncItem(item);
-          await localDataSource.markSyncSuccess(item.id!);
+          await localDataSource.markSyncCompleted(item.id!);
         } catch (e) {
-          await localDataSource.incrementRetryCount(item.id!);
+          await localDataSource.markSyncFailed(item.id!, e.toString());
         }
       }
       return const Right(null);
@@ -238,20 +247,28 @@ class EventRepositoryImpl implements EventRepository {
     }
   }
 
-  Future<void> _processSyncItem(LocalDatabase.SyncQueueItem item) async {
+  Future<void> _processSyncItem(SyncQueueItem item) async {
     switch (item.entityType) {
-      case LocalDatabase.SyncEntityType.event:
+      case SyncEntityType.event:
         switch (item.action) {
-          case LocalDatabase.SyncAction.create:
-            await remoteDataSource.createEvent(CreateEventParams.fromJson(item.payload));
+          case SyncAction.create:
+            await remoteDataSource.createEvent(
+              CreateEventParams.fromJson(item.payload),
+            );
             break;
-          case LocalDatabase.SyncAction.update:
-            await remoteDataSource.updateEvent(item.entityId!, UpdateEventParams.fromJson(item.payload));
+          case SyncAction.update:
+            await remoteDataSource.updateEvent(
+              item.entityId!,
+              UpdateEventParams.fromJson(item.payload),
+            );
             break;
-          case LocalDatabase.SyncAction.delete:
+          case SyncAction.delete:
             await remoteDataSource.deleteEvent(item.entityId!);
             break;
         }
+        break;
+      default:
+        // Handle other entity types if needed
         break;
     }
   }
@@ -269,13 +286,18 @@ class EventRepositoryImpl implements EventRepository {
   Failure _handleError(dynamic e) {
     if (e is AppException) {
       return switch (e) {
-        ServerException() => ServerFailure(message: e.message, statusCode: e.statusCode),
+        ServerException() => ServerFailure(
+          message: e.message,
+          statusCode: e.statusCode,
+        ),
         UnauthorizedException() => AuthFailure(message: e.message),
-        ValidationException() => ValidationFailure(message: e.message, fieldErrors: e.fieldErrors),
+        ValidationException() => ValidationFailure(
+          message: e.message,
+          fieldErrors: e.fieldErrors,
+        ),
         _ => ServerFailure(message: e.message),
       };
     }
     return ServerFailure(message: e.toString());
   }
 }
-

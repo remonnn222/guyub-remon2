@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../di/injection_container.dart';
+import '../../features/family/domain/repositories/family_repository.dart';
 
 /// Deep Link Service
 /// Handles deep linking for the app
@@ -13,8 +15,6 @@ class DeepLinkService {
 
   final AppLinks _appLinks = AppLinks();
   StreamSubscription<Uri>? _linkSubscription;
-
-  /// Pending deep link to handle after login
   Uri? _pendingDeepLink;
 
   /// Initialize deep link handling
@@ -41,9 +41,6 @@ class DeepLinkService {
   /// Handle deep link URI
   void _handleDeepLink(Uri uri) {
     debugPrint('Handling deep link: $uri');
-
-    // Store pending link if user is not logged in
-    // This will be handled by the router when user logs in
     _pendingDeepLink = uri;
   }
 
@@ -106,21 +103,43 @@ class DeepLinkService {
             child: const Text('Batal'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              // TODO: Implement join family logic
-              // This should call the join family use case
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Fitur bergabung keluarga akan segera hadir'),
-                ),
-              );
+              await _joinFamily(context, inviteCode);
             },
             child: const Text('Bergabung'),
           ),
         ],
       ),
     );
+  }
+
+  /// Join family logic
+  Future<void> _joinFamily(BuildContext context, String inviteCode) async {
+    try {
+      final familyRepository = sl<FamilyRepository>();
+      final result = await familyRepository.joinFamily(inviteCode);
+
+      result.fold(
+        (failure) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Gagal bergabung: ${failure.message}')),
+          );
+        },
+        (family) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Berhasil bergabung ke keluarga ${family.name}'),
+            ),
+          );
+          context.go('/families/${family.id}');
+        },
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
   }
 
   /// Dispose resources

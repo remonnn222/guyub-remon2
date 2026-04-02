@@ -94,7 +94,9 @@ class DashboardPage extends ConsumerWidget {
                 ],
               ),
               AppSpacing.verticalSM,
-              _RecentFamiliesList(families: familyState.families.take(3).toList()),
+              _RecentFamiliesList(
+                families: familyState.families.take(3).toList(),
+              ),
             ],
           ],
         ),
@@ -136,8 +138,9 @@ class _WelcomeCard extends StatelessWidget {
           CircleAvatar(
             radius: 28,
             backgroundColor: Colors.white.withValues(alpha: 0.2),
-            backgroundImage:
-                user?.avatarUrl != null ? NetworkImage(user.avatarUrl) : null,
+            backgroundImage: user?.avatarUrl != null
+                ? NetworkImage(user.avatarUrl)
+                : null,
             child: user?.avatarUrl == null
                 ? Text(
                     _getInitials(name),
@@ -306,6 +309,15 @@ class _QuickActionsGrid extends StatelessWidget {
             label: 'Keluarga Saya',
             color: AppColors.primary,
             onTap: () => context.go('/families'),
+          ),
+        ),
+        AppSpacing.horizontalMD,
+        Expanded(
+          child: _QuickActionCard(
+            icon: Icons.event,
+            label: 'Event',
+            color: AppColors.success,
+            onTap: () => context.go('/events'),
           ),
         ),
         AppSpacing.horizontalMD,

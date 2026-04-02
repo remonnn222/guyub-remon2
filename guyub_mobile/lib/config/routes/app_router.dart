@@ -9,6 +9,7 @@ import '../../features/auth/presentation/providers/auth_state.dart';
 import '../../features/dashboard/presentation/pages/dashboard_page.dart';
 import '../../features/family/presentation/pages/family_list_page.dart';
 import '../../features/family/presentation/pages/family_tree_page.dart';
+import '../../features/event/presentation/pages/events_list_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/profile/presentation/pages/edit_profile_page.dart';
 import '../../features/profile/presentation/pages/change_password_page.dart';
@@ -126,6 +127,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: RouteNames.settings,
             name: 'settings',
             builder: (context, state) => const SettingsPage(),
+          ),
+
+          // Events
+          GoRoute(
+            path: RouteNames.events,
+            name: 'events',
+            builder: (context, state) => const EventsListPage(),
           ),
         ],
       ),
