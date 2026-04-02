@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 import 'exceptions.dart';
@@ -39,7 +40,8 @@ class ErrorHandler {
     if (kDebugMode) {
       _logger.e('[$context]', error: error, stackTrace: stack);
     }
-    // TODO: In production, send to crash reporting service (e.g., Sentry, Crashlytics)
+    // Send to crash reporting service
+    FirebaseCrashlytics.instance.recordError(error, stack);
   }
 
   /// Handle exception and return appropriate failure
@@ -67,7 +69,8 @@ class ErrorHandler {
 
     if (exception is SocketException) {
       return const NetworkFailure(
-        message: 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.',
+        message:
+            'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.',
       );
     }
 
@@ -84,9 +87,7 @@ class ErrorHandler {
     }
 
     // Default error
-    return ServerFailure(
-      message: exception.toString(),
-    );
+    return ServerFailure(message: exception.toString());
   }
 
   /// Handle Dio specific exceptions
@@ -101,7 +102,8 @@ class ErrorHandler {
 
       case DioExceptionType.connectionError:
         return const NetworkFailure(
-          message: 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.',
+          message:
+              'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.',
         );
 
       case DioExceptionType.badCertificate:
@@ -113,14 +115,13 @@ class ErrorHandler {
         return _handleBadResponse(exception.response);
 
       case DioExceptionType.cancel:
-        return const ServerFailure(
-          message: 'Permintaan dibatalkan.',
-        );
+        return const ServerFailure(message: 'Permintaan dibatalkan.');
 
       case DioExceptionType.unknown:
         if (exception.error is SocketException) {
           return const NetworkFailure(
-            message: 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.',
+            message:
+                'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.',
           );
         }
         return ServerFailure(
@@ -141,9 +142,8 @@ class ErrorHandler {
     // Try to extract error message from response
     String message = 'Terjadi kesalahan pada server.';
     if (data is Map<String, dynamic>) {
-      message = data['message'] as String? ??
-          data['error'] as String? ??
-          message;
+      message =
+          data['message'] as String? ?? data['error'] as String? ?? message;
     }
 
     switch (statusCode) {
@@ -163,10 +163,7 @@ class ErrorHandler {
         );
 
       case 404:
-        return ServerFailure(
-          message: 'Data tidak ditemukan.',
-          statusCode: 404,
-        );
+        return ServerFailure(message: 'Data tidak ditemukan.', statusCode: 404);
 
       case 409:
         return ServerFailure(
@@ -196,10 +193,7 @@ class ErrorHandler {
         );
 
       default:
-        return ServerFailure(
-          message: message,
-          statusCode: statusCode,
-        );
+        return ServerFailure(message: message, statusCode: statusCode);
     }
   }
 

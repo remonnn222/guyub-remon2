@@ -6,7 +6,9 @@ import (
 	"strings"
 	"time"
 
+	domainNotification "guyub/internal/domain/notification"
 	"guyub/internal/domain/user"
+	mysqlNotification "guyub/internal/infrastructure/persistence/mysql/notification"
 
 	"gorm.io/gorm"
 )
@@ -367,6 +369,10 @@ func (r *UserRepository) UpdateLastLogin(ctx context.Context, userID uint64, ip 
 	}).Error
 }
 
+func (r *UserRepository) UpdateFCMToken(ctx context.Context, userID uint64, fcmToken string) error {
+	return r.db.WithContext(ctx).Model(&user.User{}).Where("id = ?", userID).Update("fcm_token", fcmToken).Error
+}
+
 // 2FA management
 func (r *UserRepository) Update2FA(ctx context.Context, userID uint64, secret string, recoveryCodes string) error {
 	return r.db.WithContext(ctx).Model(&user.User{}).Where("id = ?", userID).Updates(map[string]interface{}{
@@ -386,4 +392,9 @@ func (r *UserRepository) Disable2FA(ctx context.Context, userID uint64) error {
 		"two_factor_recovery_codes": nil,
 		"two_factor_confirmed_at":   nil,
 	}).Error
+}
+
+// NewNotificationRepository creates a new notification repository
+func NewNotificationRepository(db *gorm.DB) domainNotification.Repository {
+	return mysqlNotification.NewNotificationRepository(db)
 }

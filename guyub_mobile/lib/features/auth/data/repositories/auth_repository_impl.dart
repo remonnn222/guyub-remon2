@@ -41,21 +41,17 @@ class AuthRepositoryImpl implements AuthRepository {
 
       return Right((tokens, user));
     } on ValidationException catch (e) {
-      return Left(ValidationFailure(
-        message: e.message,
-        statusCode: e.statusCode,
-        fieldErrors: e.fieldErrors,
-      ));
+      return Left(
+        ValidationFailure(
+          message: e.message,
+          statusCode: e.statusCode,
+          fieldErrors: e.fieldErrors,
+        ),
+      );
     } on UnauthorizedException catch (e) {
-      return Left(AuthFailure(
-        message: e.message,
-        statusCode: e.statusCode,
-      ));
+      return Left(AuthFailure(message: e.message, statusCode: e.statusCode));
     } on AppException catch (e) {
-      return Left(ServerFailure(
-        message: e.message,
-        statusCode: e.statusCode,
-      ));
+      return Left(ServerFailure(message: e.message, statusCode: e.statusCode));
     } catch (e) {
       return Left(ServerFailure(message: e.toString()));
     }
@@ -68,9 +64,7 @@ class AuthRepositoryImpl implements AuthRepository {
       if (await networkInfo.isConnected) {
         await remoteDataSource.logout();
       }
-    } catch (_) {
-      // Ignore errors - clear local data anyway
-    }
+    } catch (_) {}
 
     // Always clear local auth data
     await secureStorage.clearAuthData();
@@ -86,9 +80,11 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       final currentRefreshToken = await secureStorage.getRefreshToken();
       if (currentRefreshToken == null) {
-        return const Left(AuthFailure(
-          message: 'Sesi Anda telah berakhir. Silakan login kembali.',
-        ));
+        return const Left(
+          AuthFailure(
+            message: 'Sesi Anda telah berakhir. Silakan login kembali.',
+          ),
+        );
       }
 
       final tokens = await remoteDataSource.refreshToken(currentRefreshToken);
@@ -100,15 +96,9 @@ class AuthRepositoryImpl implements AuthRepository {
       return Right(tokens);
     } on UnauthorizedException catch (e) {
       await secureStorage.clearAuthData();
-      return Left(AuthFailure(
-        message: e.message,
-        statusCode: e.statusCode,
-      ));
+      return Left(AuthFailure(message: e.message, statusCode: e.statusCode));
     } on AppException catch (e) {
-      return Left(ServerFailure(
-        message: e.message,
-        statusCode: e.statusCode,
-      ));
+      return Left(ServerFailure(message: e.message, statusCode: e.statusCode));
     } catch (e) {
       return Left(ServerFailure(message: e.toString()));
     }
@@ -135,19 +125,13 @@ class AuthRepositoryImpl implements AuthRepository {
       return Right(user);
     } on UnauthorizedException catch (e) {
       await secureStorage.clearAuthData();
-      return Left(AuthFailure(
-        message: e.message,
-        statusCode: e.statusCode,
-      ));
+      return Left(AuthFailure(message: e.message, statusCode: e.statusCode));
     } on AppException catch (e) {
       // Return cached user if available
       if (cachedUser != null) {
         return Right(UserModel.fromJson(cachedUser));
       }
-      return Left(ServerFailure(
-        message: e.message,
-        statusCode: e.statusCode,
-      ));
+      return Left(ServerFailure(message: e.message, statusCode: e.statusCode));
     } catch (e) {
       if (cachedUser != null) {
         return Right(UserModel.fromJson(cachedUser));
@@ -174,16 +158,15 @@ class AuthRepositoryImpl implements AuthRepository {
 
       return Right(user);
     } on ValidationException catch (e) {
-      return Left(ValidationFailure(
-        message: e.message,
-        statusCode: e.statusCode,
-        fieldErrors: e.fieldErrors,
-      ));
+      return Left(
+        ValidationFailure(
+          message: e.message,
+          statusCode: e.statusCode,
+          fieldErrors: e.fieldErrors,
+        ),
+      );
     } on AppException catch (e) {
-      return Left(ServerFailure(
-        message: e.message,
-        statusCode: e.statusCode,
-      ));
+      return Left(ServerFailure(message: e.message, statusCode: e.statusCode));
     } catch (e) {
       return Left(ServerFailure(message: e.toString()));
     }
@@ -208,16 +191,15 @@ class AuthRepositoryImpl implements AuthRepository {
       await remoteDataSource.changePassword(request);
       return const Right(null);
     } on ValidationException catch (e) {
-      return Left(ValidationFailure(
-        message: e.message,
-        statusCode: e.statusCode,
-        fieldErrors: e.fieldErrors,
-      ));
+      return Left(
+        ValidationFailure(
+          message: e.message,
+          statusCode: e.statusCode,
+          fieldErrors: e.fieldErrors,
+        ),
+      );
     } on AppException catch (e) {
-      return Left(ServerFailure(
-        message: e.message,
-        statusCode: e.statusCode,
-      ));
+      return Left(ServerFailure(message: e.message, statusCode: e.statusCode));
     } catch (e) {
       return Left(ServerFailure(message: e.toString()));
     }

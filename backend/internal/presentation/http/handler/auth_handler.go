@@ -75,3 +75,22 @@ func (h *AuthHandler) Me(c *gin.Context) {
 
 	response.OK(c, "User retrieved", result)
 }
+
+func (h *AuthHandler) SaveFCMToken(c *gin.Context) {
+	userID := middleware.GetUserID(c)
+
+	var req struct {
+		FCMToken string `json:"fcm_token" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request body", err.Error())
+		return
+	}
+
+	if err := h.authService.SaveFCMToken(c.Request.Context(), userID, req.FCMToken); err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
+	response.OK(c, "FCM token saved", nil)
+}

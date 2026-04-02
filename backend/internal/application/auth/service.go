@@ -52,11 +52,11 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	User         *UserResponse          `json:"user"`
-	AccessToken  string                 `json:"access_token"`
-	RefreshToken string                 `json:"refresh_token"`
-	TokenType    string                 `json:"token_type"`
-	ExpiresIn    int64                  `json:"expires_in"`
+	User         *UserResponse `json:"user"`
+	AccessToken  string        `json:"access_token"`
+	RefreshToken string        `json:"refresh_token"`
+	TokenType    string        `json:"token_type"`
+	ExpiresIn    int64         `json:"expires_in"`
 }
 
 type UserResponse struct {
@@ -231,6 +231,10 @@ func (s *Service) Me(ctx context.Context, userID uint64) (*UserResponse, error) 
 		Roles:       u.GetRoleNames(),
 		Permissions: permissions,
 	}, nil
+}
+
+func (s *Service) SaveFCMToken(ctx context.Context, userID uint64, fcmToken string) error {
+	return s.userRepo.UpdateFCMToken(ctx, userID, fcmToken)
 }
 
 // getAvatarURL fetches the avatar URL for a user

@@ -14,14 +14,15 @@ type Config struct {
 	Storage  StorageConfig
 	CORS     CORSConfig
 	Log      LogConfig
+	Firebase FirebaseConfig
 }
 
 type AppConfig struct {
-	Name    string
-	Env     string
-	Port    int
-	URL     string
-	Debug   bool
+	Name  string
+	Env   string
+	Port  int
+	URL   string
+	Debug bool
 }
 
 type DatabaseConfig struct {
@@ -55,6 +56,11 @@ type CORSConfig struct {
 type LogConfig struct {
 	Level  string
 	Format string
+}
+
+type FirebaseConfig struct {
+	ServiceAccountPath string
+	ProjectID          string
 }
 
 func Load() (*Config, error) {
@@ -112,6 +118,10 @@ func Load() (*Config, error) {
 			Level:  viper.GetString("log.level"),
 			Format: viper.GetString("log.format"),
 		},
+		Firebase: FirebaseConfig{
+			ServiceAccountPath: viper.GetString("firebase.service_account_path"),
+			ProjectID:          viper.GetString("firebase.project_id"),
+		},
 	}
 
 	return config, nil
@@ -148,6 +158,10 @@ func setDefaults() {
 	viper.SetDefault("cors.allowed_origins", []string{"http://localhost:3000", "http://localhost:5173"})
 	viper.SetDefault("cors.allowed_methods", []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"})
 	viper.SetDefault("cors.allowed_headers", []string{"Authorization", "Content-Type"})
+
+	// Firebase defaults
+	viper.SetDefault("firebase.service_account_path", "./service-account.json")
+	viper.SetDefault("firebase.project_id", "guyub-61b85")
 
 	// Log defaults
 	viper.SetDefault("log.level", "debug")

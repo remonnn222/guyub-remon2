@@ -4,12 +4,15 @@ class RouteNames {
 
   // Auth
   static const String splash = '/';
+  static const String onboarding = '/onboarding';
   static const String login = '/login';
   static const String forgotPassword = '/forgot-password';
 
   // Main
   static const String dashboard = '/dashboard';
   static const String profile = '/profile';
+  static const String editProfile = '/profile/edit';
+  static const String changePassword = '/profile/change-password';
   static const String settings = '/settings';
 
   // Family

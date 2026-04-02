@@ -66,3 +66,59 @@ abstract class _$EnvironmentNotifier extends $Notifier<Environment> {
     element.handleCreate(ref, build);
   }
 }
+
+/// Biometric Settings Notifier
+
+@ProviderFor(BiometricNotifier)
+final biometricProvider = BiometricNotifierProvider._();
+
+/// Biometric Settings Notifier
+final class BiometricNotifierProvider
+    extends $AsyncNotifierProvider<BiometricNotifier, Map<String, dynamic>> {
+  /// Biometric Settings Notifier
+  BiometricNotifierProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'biometricProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$biometricNotifierHash();
+
+  @$internal
+  @override
+  BiometricNotifier create() => BiometricNotifier();
+}
+
+String _$biometricNotifierHash() => r'70929f4f8162fa53a2fec643591eb0bc4096e849';
+
+/// Biometric Settings Notifier
+
+abstract class _$BiometricNotifier
+    extends $AsyncNotifier<Map<String, dynamic>> {
+  FutureOr<Map<String, dynamic>> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref =
+        this.ref
+            as $Ref<AsyncValue<Map<String, dynamic>>, Map<String, dynamic>>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<
+                AsyncValue<Map<String, dynamic>>,
+                Map<String, dynamic>
+              >,
+              AsyncValue<Map<String, dynamic>>,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}

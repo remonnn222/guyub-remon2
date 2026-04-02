@@ -4,6 +4,9 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../config/theme/app_colors.dart';
 import '../../../../config/theme/app_spacing.dart';
 import '../../../../config/constants/api_constants.dart';
+import '../../../../config/theme/theme_provider.dart';
+import '../../../../core/di/injection_container.dart';
+import '../../../../core/security/biometric_service.dart';
 
 part 'settings_page.g.dart';
 
@@ -29,6 +32,43 @@ class EnvironmentNotifier extends _$EnvironmentNotifier {
   }
 }
 
+/// Biometric Settings Notifier
+@riverpod
+class BiometricNotifier extends _$BiometricNotifier {
+  @override
+  Future<Map<String, dynamic>> build() async {
+    final biometricService = sl<BiometricService>();
+
+    return {
+      'isEnabled': await biometricService.isBiometricLoginEnabled,
+      'isSupported': await biometricService.isSupported,
+      'isEnrolled': await biometricService.isEnrolled,
+      'availableTypes': await biometricService.getAvailableBiometrics(),
+    };
+  }
+
+  /// Toggle biometric login
+  /// Note: Biometric can only be disabled from settings.
+  /// Enabling requires going through login flow with credentials.
+  Future<void> toggleBiometric(bool enable) async {
+    final biometricService = sl<BiometricService>();
+
+    // Only allow disabling biometric from settings
+    if (!enable) {
+      await biometricService.disableBiometricLogin();
+    }
+    // If trying to enable, do nothing - user must go through login flow
+
+    // Refresh the state
+    state = AsyncValue.data({
+      'isEnabled': await biometricService.isBiometricLoginEnabled,
+      'isSupported': await biometricService.isSupported,
+      'isEnrolled': await biometricService.isEnrolled,
+      'availableTypes': await biometricService.getAvailableBiometrics(),
+    });
+  }
+}
+
 /// Settings Page
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -38,10 +78,7 @@ class SettingsPage extends ConsumerWidget {
     final currentEnv = ref.watch(environmentProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Pengaturan'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('Pengaturan'), centerTitle: true),
       body: ListView(
         padding: AppSpacing.paddingLG,
         children: [
@@ -55,23 +92,19 @@ class SettingsPage extends ConsumerWidget {
                   groupValue: currentEnv,
                   onChanged: (value) {
                     if (value != null) {
-                      ref.read(environmentProvider.notifier).setEnvironment(value);
+                      ref
+                          .read(environmentProvider.notifier)
+                          .setEnvironment(value);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text('Server diubah ke: ${env.label}'),
-                          action: SnackBarAction(
-                            label: 'OK',
-                            onPressed: () {},
-                          ),
+                          action: SnackBarAction(label: 'OK', onPressed: () {}),
                         ),
                       );
                     }
                   },
                   title: Text(env.label),
-                  subtitle: Text(
-                    env.url,
-                    style: const TextStyle(fontSize: 12),
-                  ),
+                  subtitle: Text(env.url, style: const TextStyle(fontSize: 12)),
                   activeColor: AppColors.primary,
                 );
               }).toList(),
@@ -89,7 +122,11 @@ class SettingsPage extends ConsumerWidget {
             ),
             child: Row(
               children: [
-                const Icon(Icons.link, color: AppColors.textSecondary, size: 20),
+                const Icon(
+                  Icons.link,
+                  color: AppColors.textSecondary,
+                  size: 20,
+                ),
                 AppSpacing.horizontalSM,
                 Expanded(
                   child: Column(
@@ -118,6 +155,12 @@ class SettingsPage extends ConsumerWidget {
           ),
           AppSpacing.verticalXL,
 
+          // Biometric Security Section
+          const _SectionHeader(title: 'Keamanan'),
+          _buildBiometricSettings(context),
+
+          AppSpacing.verticalXL,
+
           // App Settings Section
           const _SectionHeader(title: 'Aplikasi'),
           Card(
@@ -138,13 +181,57 @@ class SettingsPage extends ConsumerWidget {
                 ListTile(
                   leading: const Icon(Icons.dark_mode),
                   title: const Text('Tema'),
-                  subtitle: const Text('Terang'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Fitur akan segera hadir')),
-                    );
-                  },
+                  subtitle: Text(ref.watch(themeProvider).label),
+                  trailing: PopupMenuButton<AppThemeMode>(
+                    onSelected: (mode) {
+                      ref.read(themeProvider.notifier).setThemeMode(mode);
+                    },
+                    itemBuilder: (context) => AppThemeMode.values.map((mode) {
+                      return PopupMenuItem(
+                        value: mode,
+                        child: Row(
+                          children: [
+                            Icon(
+                              mode == AppThemeMode.light
+                                  ? Icons.wb_sunny
+                                  : mode == AppThemeMode.dark
+                                  ? Icons.nightlight_round
+                                  : Icons.settings_brightness,
+                              color: AppColors.primary,
+                            ),
+                            AppSpacing.horizontalSM,
+                            Text(mode.label),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: AppColors.border),
+                        borderRadius: AppSpacing.borderRadiusMd,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            ref.watch(themeProvider) == AppThemeMode.light
+                                ? Icons.wb_sunny
+                                : ref.watch(themeProvider) == AppThemeMode.dark
+                                ? Icons.nightlight_round
+                                : Icons.settings_brightness,
+                            size: 20,
+                            color: AppColors.primary,
+                          ),
+                          AppSpacing.horizontalXS,
+                          const Icon(Icons.arrow_drop_down, size: 20),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
                 const Divider(height: 1),
                 ListTile(
@@ -190,6 +277,138 @@ class SettingsPage extends ConsumerWidget {
     );
   }
 
+  Widget _buildBiometricSettings(BuildContext context) {
+    return Consumer(
+      builder: (context, ref, _) {
+        final biometricState = ref.watch(biometricProvider);
+
+        return biometricState.when(
+          data: (biometricData) {
+            final isEnabled = biometricData['isEnabled'] as bool;
+            final isSupported = biometricData['isSupported'] as bool;
+            final isEnrolled = biometricData['isEnrolled'] as bool;
+            final availableTypes = biometricData['availableTypes'] as List;
+
+            if (!isSupported) {
+              return Card(
+                child: Padding(
+                  padding: AppSpacing.paddingMD,
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.fingerprint,
+                        color: AppColors.textSecondary,
+                      ),
+                      AppSpacing.horizontalMD,
+                      Expanded(
+                        child: Text(
+                          'Biometric tidak didukung perangkat Anda',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: AppColors.textSecondary),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            if (!isEnrolled) {
+              return Card(
+                child: Padding(
+                  padding: AppSpacing.paddingMD,
+                  child: Row(
+                    children: [
+                      const Icon(Icons.fingerprint, color: AppColors.warning),
+                      AppSpacing.horizontalMD,
+                      Expanded(
+                        child: Text(
+                          'Daftar sidik jari atau Face ID di pengaturan perangkat',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: AppColors.warning),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            // Biometric is supported and enrolled
+            return Card(
+              child: Column(
+                children: [
+                  SwitchListTile(
+                    secondary: const Icon(Icons.fingerprint),
+                    title: const Text('Login Biometrik'),
+                    subtitle: Text(_getBiometricTypeLabel(availableTypes)),
+                    value: isEnabled,
+                    onChanged: (value) async {
+                      await ref
+                          .read(biometricProvider.notifier)
+                          .toggleBiometric(!value);
+
+                      if (!context.mounted) return;
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            !value
+                                ? 'Login biometrik dinonaktifkan'
+                                : 'Aktifkan login biometrik melalui proses login',
+                          ),
+                          backgroundColor: AppColors.success,
+                        ),
+                      );
+                    },
+                    activeColor: AppColors.primary,
+                  ),
+                ],
+              ),
+            );
+          },
+          loading: () => Card(
+            child: Padding(
+              padding: AppSpacing.paddingMD,
+              child: const Center(child: CircularProgressIndicator()),
+            ),
+          ),
+          error: (error, _) => Card(
+            child: Padding(
+              padding: AppSpacing.paddingMD,
+              child: Text(
+                'Error: $error',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppColors.error),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Get biometric type label based on available types
+  String _getBiometricTypeLabel(List availableTypes) {
+    if (availableTypes.isEmpty) {
+      return 'Tidak ada biometric tersedia';
+    }
+
+    final labels = <String>[];
+    for (final type in availableTypes) {
+      if (type.toString().contains('fingerprint')) {
+        labels.add('Sidik Jari');
+      } else if (type.toString().contains('faceId')) {
+        labels.add('Face ID');
+      } else if (type.toString().contains('iris')) {
+        labels.add('Iris');
+      }
+    }
+
+    return labels.isNotEmpty ? labels.join(', ') : 'Biometric';
+  }
+
   void _showClearCacheDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -207,7 +426,8 @@ class SettingsPage extends ConsumerWidget {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              // TODO: Clear cache
+              // TODO: Implement cache clearing functionality
+              // This would clear Hive boxes and local storage
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Cache berhasil dihapus')),
               );

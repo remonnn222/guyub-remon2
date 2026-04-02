@@ -44,6 +44,7 @@ type Repository interface {
 	// Token management
 	UpdateRememberToken(ctx context.Context, userID uint64, token string) error
 	UpdateLastLogin(ctx context.Context, userID uint64, ip string) error
+	UpdateFCMToken(ctx context.Context, userID uint64, fcmToken string) error
 
 	// 2FA management
 	Update2FA(ctx context.Context, userID uint64, secret string, recoveryCodes string) error
@@ -53,10 +54,10 @@ type Repository interface {
 
 // Filter for querying users
 type Filter struct {
-	Search    string
-	Status    *Status
-	Type      *Type
-	RoleID    *uint64
+	Search      string
+	Status      *Status
+	Type        *Type
+	RoleID      *uint64
 	WithTrashed bool
 	OnlyTrashed bool
 }

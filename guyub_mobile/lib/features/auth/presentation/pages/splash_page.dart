@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../config/theme/app_colors.dart';
 import '../../../../config/theme/app_spacing.dart';
 import '../../../../config/theme/app_typography.dart';
+import '../../../../config/constants/app_constants.dart';
+import '../../../../config/routes/route_names.dart';
+import '../../../../core/di/injection_container.dart';
+import '../../../../core/services/deep_link_service.dart';
 import '../providers/auth_provider.dart';
 import '../providers/auth_state.dart';
 
@@ -58,6 +63,16 @@ class _SplashPageState extends ConsumerState<SplashPage>
 
     if (!mounted) return;
 
+    // Check if onboarding is completed
+    final prefs = await SharedPreferences.getInstance();
+    final isOnboardingCompleted =
+        prefs.getBool(AppConstants.keyOnboardingComplete) ?? false;
+
+    if (!isOnboardingCompleted) {
+      context.go(RouteNames.onboarding);
+      return;
+    }
+
     // Check auth state and navigate
     final authState = ref.read(authProvider);
 
@@ -67,6 +82,15 @@ class _SplashPageState extends ConsumerState<SplashPage>
         // Still checking/loading - wait for state change
         break;
       case AuthStateAuthenticated():
+        // Check for pending deep link
+        final deepLinkService = sl<DeepLinkService>();
+        if (deepLinkService.hasPendingDeepLink()) {
+          final pendingLink = deepLinkService.getAndClearPendingDeepLink();
+          if (pendingLink != null) {
+            deepLinkService.navigateToDeepLink(context, pendingLink);
+            return;
+          }
+        }
         context.go('/dashboard');
       case AuthStateUnauthenticated():
       case AuthStateError():
@@ -89,7 +113,18 @@ class _SplashPageState extends ConsumerState<SplashPage>
         case AuthStateLoading():
           break;
         case AuthStateAuthenticated():
-          context.go('/dashboard');
+          // Check for pending deep link
+          final deepLinkService = sl<DeepLinkService>();
+          if (deepLinkService.hasPendingDeepLink()) {
+            final pendingLink = deepLinkService.getAndClearPendingDeepLink();
+            if (pendingLink != null) {
+              deepLinkService.navigateToDeepLink(context, pendingLink);
+              return;
+            }
+          }
+          if (mounted) {
+            context.go('/dashboard');
+          }
         case AuthStateUnauthenticated():
         case AuthStateError():
           context.go('/login');

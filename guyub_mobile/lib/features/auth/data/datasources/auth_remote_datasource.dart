@@ -65,7 +65,6 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       if (e.error is AppException) {
         throw e.error as AppException;
       }
-      // Ignore logout errors - clear tokens anyway
     }
   }
 
@@ -127,10 +126,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   @override
   Future<void> changePassword(ChangePasswordRequest request) async {
     try {
-      await apiClient.post(
-        ApiConstants.changePassword,
-        data: request.toJson(),
-      );
+      await apiClient.post(ApiConstants.changePassword, data: request.toJson());
     } on DioException catch (e) {
       if (e.error is AppException) {
         throw e.error as AppException;

@@ -17,7 +17,10 @@ abstract class FamilyRepository {
   Future<Either<Failure, Family>> createFamily(CreateFamilyParams params);
 
   /// Update family
-  Future<Either<Failure, Family>> updateFamily(int id, UpdateFamilyParams params);
+  Future<Either<Failure, Family>> updateFamily(
+    int id,
+    UpdateFamilyParams params,
+  );
 
   /// Delete family
   Future<Either<Failure, void>> deleteFamily(int id);
@@ -35,22 +38,33 @@ abstract class FamilyRepository {
   Future<Either<Failure, Person>> createPerson(CreatePersonParams params);
 
   /// Update person
-  Future<Either<Failure, Person>> updatePerson(int id, UpdatePersonParams params);
+  Future<Either<Failure, Person>> updatePerson(
+    int id,
+    UpdatePersonParams params,
+  );
 
   /// Delete person
   Future<Either<Failure, void>> deletePerson(int id);
 
   /// Create relationship between persons
-  Future<Either<Failure, Relationship>> createRelationship(CreateRelationshipParams params);
+  Future<Either<Failure, Relationship>> createRelationship(
+    CreateRelationshipParams params,
+  );
 
   /// Delete relationship
   Future<Either<Failure, void>> deleteRelationship(int id);
 
   /// Update tree positions (batch)
-  Future<Either<Failure, void>> updateTreePositions(int familyId, List<TreePosition> positions);
+  Future<Either<Failure, void>> updateTreePositions(
+    int familyId,
+    List<TreePosition> positions,
+  );
 
   /// Sync offline data
   Future<Either<Failure, void>> syncOfflineData();
+
+  /// Get pending sync count
+  Future<Either<Failure, int>> getPendingSyncCount();
 }
 
 /// Create Family Parameters
@@ -68,11 +82,11 @@ class CreateFamilyParams {
   });
 
   Map<String, dynamic> toJson() => {
-        'name': name,
-        if (description != null) 'description': description,
-        if (origin != null) 'origin': origin,
-        'is_public': isPublic,
-      };
+    'name': name,
+    if (description != null) 'description': description,
+    if (origin != null) 'origin': origin,
+    'is_public': isPublic,
+  };
 }
 
 /// Update Family Parameters
@@ -128,18 +142,20 @@ class CreatePersonParams {
   });
 
   Map<String, dynamic> toJson() => {
-        'family_id': familyId,
-        'first_name': firstName,
-        if (lastName != null) 'last_name': lastName,
-        if (gender != null) 'gender': gender,
-        if (birthDate != null) 'birth_date': birthDate!.toIso8601String().split('T')[0],
-        if (deathDate != null) 'death_date': deathDate!.toIso8601String().split('T')[0],
-        if (birthPlace != null) 'birth_place': birthPlace,
-        if (deathPlace != null) 'death_place': deathPlace,
-        if (occupation != null) 'occupation': occupation,
-        if (bio != null) 'bio': bio,
-        'generation_level': generationLevel,
-      };
+    'family_id': familyId,
+    'first_name': firstName,
+    if (lastName != null) 'last_name': lastName,
+    if (gender != null) 'gender': gender,
+    if (birthDate != null)
+      'birth_date': birthDate!.toIso8601String().split('T')[0],
+    if (deathDate != null)
+      'death_date': deathDate!.toIso8601String().split('T')[0],
+    if (birthPlace != null) 'birth_place': birthPlace,
+    if (deathPlace != null) 'death_place': deathPlace,
+    if (occupation != null) 'occupation': occupation,
+    if (bio != null) 'bio': bio,
+    'generation_level': generationLevel,
+  };
 }
 
 /// Update Person Parameters
@@ -173,8 +189,10 @@ class UpdatePersonParams {
     if (firstName != null) map['first_name'] = firstName;
     if (lastName != null) map['last_name'] = lastName;
     if (gender != null) map['gender'] = gender;
-    if (birthDate != null) map['birth_date'] = birthDate!.toIso8601String().split('T')[0];
-    if (deathDate != null) map['death_date'] = deathDate!.toIso8601String().split('T')[0];
+    if (birthDate != null)
+      map['birth_date'] = birthDate!.toIso8601String().split('T')[0];
+    if (deathDate != null)
+      map['death_date'] = deathDate!.toIso8601String().split('T')[0];
     if (birthPlace != null) map['birth_place'] = birthPlace;
     if (deathPlace != null) map['death_place'] = deathPlace;
     if (occupation != null) map['occupation'] = occupation;
@@ -201,10 +219,11 @@ class CreateRelationshipParams {
   });
 
   Map<String, dynamic> toJson() => {
-        'person_id': personId,
-        'related_person_id': relatedPersonId,
-        'type': type.name,
-        if (marriageStatus != null) 'marriage_status': marriageStatus!.name,
-        if (marriageDate != null) 'marriage_date': marriageDate!.toIso8601String().split('T')[0],
-      };
+    'person_id': personId,
+    'related_person_id': relatedPersonId,
+    'type': type.name,
+    if (marriageStatus != null) 'marriage_status': marriageStatus!.name,
+    if (marriageDate != null)
+      'marriage_date': marriageDate!.toIso8601String().split('T')[0],
+  };
 }

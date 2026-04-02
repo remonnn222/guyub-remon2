@@ -43,3 +43,7 @@ cors:
 log:
   level: debug
   format: console
+
+firebase:
+  service_account_path: ./service-account.json
+  project_id: guyub-61b85

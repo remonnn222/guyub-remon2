@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../config/routes/route_names.dart';
 import '../../../../config/theme/app_colors.dart';
 import '../../../../config/theme/app_spacing.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
@@ -22,10 +23,7 @@ class ProfilePage extends ConsumerWidget {
     };
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profil'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('Profil'), centerTitle: true),
       body: ListView(
         padding: AppSpacing.paddingLG,
         children: [
@@ -101,20 +99,12 @@ class ProfilePage extends ConsumerWidget {
           _ProfileMenuItem(
             icon: Icons.person_outline,
             title: 'Edit Profil',
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Fitur akan segera hadir')),
-              );
-            },
+            onTap: () => context.go(RouteNames.editProfile),
           ),
           _ProfileMenuItem(
             icon: Icons.lock_outline,
             title: 'Ubah Password',
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Fitur akan segera hadir')),
-              );
-            },
+            onTap: () => context.go(RouteNames.changePassword),
           ),
           _ProfileMenuItem(
             icon: Icons.notifications_outlined,

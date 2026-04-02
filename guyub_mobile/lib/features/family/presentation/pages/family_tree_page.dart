@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../../config/theme/app_colors.dart';
 import '../../../../config/theme/app_spacing.dart';
 import '../../domain/entities/family.dart';
@@ -14,10 +16,7 @@ import '../widgets/add_relationship_dialog.dart';
 class FamilyTreePage extends ConsumerStatefulWidget {
   final int familyId;
 
-  const FamilyTreePage({
-    super.key,
-    required this.familyId,
-  });
+  const FamilyTreePage({super.key, required this.familyId});
 
   @override
   ConsumerState<FamilyTreePage> createState() => _FamilyTreePageState();
@@ -123,20 +122,29 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, size: 64, color: AppColors.danger),
+              const Icon(
+                Icons.error_outline,
+                size: 64,
+                color: AppColors.danger,
+              ),
               AppSpacing.verticalMD,
               Text(message, textAlign: TextAlign.center),
               AppSpacing.verticalLG,
               ElevatedButton(
-                onPressed: () =>
-                    ref.read(familyTreeProvider(widget.familyId).notifier).refresh(),
+                onPressed: () => ref
+                    .read(familyTreeProvider(widget.familyId).notifier)
+                    .refresh(),
                 child: const Text('Coba Lagi'),
               ),
             ],
           ),
         );
 
-      case FamilyTreeLoaded(:final treeData, :final isOffline, :final selectedPerson):
+      case FamilyTreeLoaded(
+        :final treeData,
+        :final isOffline,
+        :final selectedPerson,
+      ):
         if (treeData.persons.isEmpty) {
           return _buildEmptyTree(treeData.family);
         }
@@ -156,10 +164,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
                     SizedBox(width: 8),
                     Text(
                       'Mode Offline - Perubahan akan disinkronkan',
-                      style: TextStyle(
-                        color: AppColors.warning,
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: AppColors.warning, fontSize: 12),
                     ),
                   ],
                 ),
@@ -171,13 +176,19 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
               decoration: BoxDecoration(
                 color: AppColors.surface,
                 border: Border(
-                  bottom: BorderSide(color: AppColors.border.withValues(alpha: 0.5)),
+                  bottom: BorderSide(
+                    color: AppColors.border.withValues(alpha: 0.5),
+                  ),
                 ),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildStat(Icons.people, '${treeData.persons.length}', 'Anggota'),
+                  _buildStat(
+                    Icons.people,
+                    '${treeData.persons.length}',
+                    'Anggota',
+                  ),
                   _buildStat(
                     Icons.family_restroom,
                     '${_countGenerations(treeData)}',
@@ -236,10 +247,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
         ),
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 11,
-            color: AppColors.textSecondary,
-          ),
+          style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
         ),
       ],
     );
@@ -440,18 +448,26 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
         }
         break;
       case 'export':
-        // TODO: Implement export
+    
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Fitur ekspor akan segera hadir')),
         );
         break;
       case 'settings':
-        // TODO: Navigate to family settings
         break;
     }
   }
 
   void _showShareDialog(Family family) {
+    final inviteCode = family.inviteCode ?? '';
+    final familyName = family.name;
+    final shareUrl = 'https://guyub.id/invite/$inviteCode';
+
+    final shareMessage =
+        'Yuk bergabung ke keluarga $familyName di Guyub!\n'
+        'Kode undangan: $inviteCode\n'
+        'Link: $shareUrl';
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -459,7 +475,7 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Gunakan kode undangan ini untuk mengundang anggota keluarga lain:'),
+            const Text('Undang anggota keluarga lain untuk bergabung:'),
             AppSpacing.verticalMD,
             Container(
               padding: AppSpacing.paddingMD,
@@ -468,13 +484,41 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: AppColors.border),
               ),
-              child: SelectableText(
-                family.inviteCode ?? 'Tidak tersedia',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 2,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Kode Undangan:',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  SelectableText(
+                    inviteCode,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                  AppSpacing.verticalSM,
+                  const Text(
+                    'Link:',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  SelectableText(
+                    shareUrl,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppColors.primary,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -484,20 +528,40 @@ class _FamilyTreePageState extends ConsumerState<FamilyTreePage> {
             onPressed: () => Navigator.pop(context),
             child: const Text('Tutup'),
           ),
-          if (family.inviteCode != null)
+          if (inviteCode.isNotEmpty) ...[
             TextButton(
-              onPressed: () {
-                // TODO: Copy to clipboard
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Kode disalin ke clipboard')),
-                );
+              onPressed: () async {
+                // Copy to clipboard
+                await _copyToClipboard(inviteCode);
+                if (mounted) Navigator.pop(context);
               },
-              child: const Text('Salin'),
+              child: const Text('Salin Kode'),
             ),
+            TextButton(
+              onPressed: () async {
+                // Share using system share sheet
+                await Share.share(
+                  shareMessage,
+                  subject: 'Undangan Bergabung Keluarga $familyName',
+                );
+                if (mounted) Navigator.pop(context);
+              },
+              style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+              child: const Text('Bagikan'),
+            ),
+          ],
         ],
       ),
     );
+  }
+
+  Future<void> _copyToClipboard(String text) async {
+    await Clipboard.setData(ClipboardData(text: text));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Kode $text disalin ke clipboard')),
+      );
+    }
   }
 
   int _countGenerations(FamilyTreeData treeData) {

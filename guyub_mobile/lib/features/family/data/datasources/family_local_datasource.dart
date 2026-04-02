@@ -68,6 +68,9 @@ abstract class FamilyLocalDataSource {
   /// Get pending sync items
   Future<List<SyncQueueItem>> getPendingSyncItems();
 
+  /// Get pending sync item count (pending + retryable failed)
+  Future<int> getPendingSyncItemCount();
+
   /// Mark sync item as completed
   Future<void> markSyncCompleted(int id);
 
@@ -93,11 +96,7 @@ class FamilyLocalDataSourceImpl implements FamilyLocalDataSource {
   @override
   Future<FamilyModel?> getFamilyById(int id) async {
     final db = await LocalDatabase.database;
-    final maps = await db.query(
-      'families',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    final maps = await db.query('families', where: 'id = ?', whereArgs: [id]);
     if (maps.isEmpty) return null;
     return _familyFromMap(maps.first);
   }
@@ -164,11 +163,7 @@ class FamilyLocalDataSourceImpl implements FamilyLocalDataSource {
   @override
   Future<PersonModel?> getPersonById(int id) async {
     final db = await LocalDatabase.database;
-    final maps = await db.query(
-      'persons',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    final maps = await db.query('persons', where: 'id = ?', whereArgs: [id]);
     if (maps.isEmpty) return null;
     return _personFromMap(maps.first);
   }
@@ -221,7 +216,8 @@ class FamilyLocalDataSourceImpl implements FamilyLocalDataSource {
 
     final maps = await db.query(
       'relationships',
-      where: 'person_id IN ($placeholders) OR related_person_id IN ($placeholders)',
+      where:
+          'person_id IN ($placeholders) OR related_person_id IN ($placeholders)',
       whereArgs: [...ids, ...ids],
     );
     return maps.map((m) => _relationshipFromMap(m)).toList();
@@ -295,7 +291,11 @@ class FamilyLocalDataSourceImpl implements FamilyLocalDataSource {
   @override
   Future<void> deleteTreePositions(int familyId) async {
     final db = await LocalDatabase.database;
-    await db.delete('tree_positions', where: 'family_id = ?', whereArgs: [familyId]);
+    await db.delete(
+      'tree_positions',
+      where: 'family_id = ?',
+      whereArgs: [familyId],
+    );
   }
 
   @override
@@ -322,17 +322,23 @@ class FamilyLocalDataSourceImpl implements FamilyLocalDataSource {
       whereArgs: ['pending'],
       orderBy: 'created_at ASC',
     );
-    return maps.map((m) => SyncQueueItem(
-      id: m['id'] as int,
-      action: SyncAction.values.firstWhere((e) => e.name == m['action']),
-      entityType: SyncEntityType.values.firstWhere((e) => e.name == m['entity_type']),
-      entityId: m['entity_id'] as int?,
-      payload: jsonDecode(m['payload'] as String),
-      createdAt: DateTime.parse(m['created_at'] as String),
-      status: m['status'] as String,
-      errorMessage: m['error_message'] as String?,
-      retryCount: m['retry_count'] as int,
-    )).toList();
+    return maps
+        .map(
+          (m) => SyncQueueItem(
+            id: m['id'] as int,
+            action: SyncAction.values.firstWhere((e) => e.name == m['action']),
+            entityType: SyncEntityType.values.firstWhere(
+              (e) => e.name == m['entity_type'],
+            ),
+            entityId: m['entity_id'] as int?,
+            payload: jsonDecode(m['payload'] as String),
+            createdAt: DateTime.parse(m['created_at'] as String),
+            status: m['status'] as String,
+            errorMessage: m['error_message'] as String?,
+            retryCount: m['retry_count'] as int,
+          ),
+        )
+        .toList();
   }
 
   @override
@@ -347,18 +353,44 @@ class FamilyLocalDataSourceImpl implements FamilyLocalDataSource {
   }
 
   @override
+  Future<int> getPendingSyncItemCount() async {
+    final db = await LocalDatabase.database;
+    final countResult = await db.rawQuery('''
+      SELECT COUNT(*) as count
+      FROM sync_queue
+      WHERE status = 'pending'
+      OR (status = 'failed' AND retry_count < 3)
+    ''');
+    return Sqflite.firstIntValue(countResult) ?? 0;
+  }
+
+  @override
   Future<void> markSyncFailed(int id, String errorMessage) async {
     final db = await LocalDatabase.database;
     await db.rawUpdate(
-      'UPDATE sync_queue SET status = ?, error_message = ?, retry_count = retry_count + 1 WHERE id = ?',
-      ['failed', errorMessage, id],
+      '''
+      UPDATE sync_queue
+      SET
+        retry_count = retry_count + 1,
+        status = CASE
+          WHEN retry_count + 1 >= 3 THEN 'failed'
+          ELSE 'pending'
+        END,
+        error_message = ?
+      WHERE id = ?
+      ''',
+      [errorMessage, id],
     );
   }
 
   @override
   Future<void> clearSyncQueue() async {
     final db = await LocalDatabase.database;
-    await db.delete('sync_queue', where: 'status = ?', whereArgs: ['completed']);
+    await db.delete(
+      'sync_queue',
+      where: 'status = ?',
+      whereArgs: ['completed'],
+    );
   }
 
   @override
@@ -375,7 +407,11 @@ class FamilyLocalDataSourceImpl implements FamilyLocalDataSource {
 
       // Clear old data for this family
       final familyId = treeData.family.id;
-      await txn.delete('tree_positions', where: 'family_id = ?', whereArgs: [familyId]);
+      await txn.delete(
+        'tree_positions',
+        where: 'family_id = ?',
+        whereArgs: [familyId],
+      );
 
       // Get existing persons
       final existingPersonIds = (await txn.query(
@@ -392,7 +428,8 @@ class FamilyLocalDataSourceImpl implements FamilyLocalDataSource {
         final placeholders = List.filled(toRemove.length, '?').join(',');
         await txn.delete(
           'relationships',
-          where: 'person_id IN ($placeholders) OR related_person_id IN ($placeholders)',
+          where:
+              'person_id IN ($placeholders) OR related_person_id IN ($placeholders)',
           whereArgs: [...toRemove, ...toRemove],
         );
         await txn.delete(
@@ -433,96 +470,97 @@ class FamilyLocalDataSourceImpl implements FamilyLocalDataSource {
 
   // Mappers
   Map<String, dynamic> _familyToMap(FamilyModel family) => {
-        'id': family.id,
-        'name': family.name,
-        'description': family.description,
-        'origin': family.origin,
-        'invite_code': family.inviteCode,
-        'is_public': family.isPublic ? 1 : 0,
-        'created_by': family.createdBy,
-        'created_at': family.createdAt?.toIso8601String(),
-        'updated_at': family.updatedAt?.toIso8601String(),
-        'pending_sync': 0,
-        'synced_at': DateTime.now().toIso8601String(),
-      };
+    'id': family.id,
+    'name': family.name,
+    'description': family.description,
+    'origin': family.origin,
+    'invite_code': family.inviteCode,
+    'is_public': family.isPublic ? 1 : 0,
+    'created_by': family.createdBy,
+    'created_at': family.createdAt?.toIso8601String(),
+    'updated_at': family.updatedAt?.toIso8601String(),
+    'pending_sync': 0,
+    'synced_at': DateTime.now().toIso8601String(),
+  };
 
   FamilyModel _familyFromMap(Map<String, dynamic> map) => FamilyModel(
-        id: map['id'] as int,
-        name: map['name'] as String,
-        description: map['description'] as String?,
-        origin: map['origin'] as String?,
-        inviteCode: map['invite_code'] as String?,
-        isPublic: (map['is_public'] as int) == 1,
-        createdBy: map['created_by'] as int?,
-        createdAt: map['created_at'] != null
-            ? DateTime.parse(map['created_at'] as String)
-            : null,
-        updatedAt: map['updated_at'] != null
-            ? DateTime.parse(map['updated_at'] as String)
-            : null,
-      );
+    id: map['id'] as int,
+    name: map['name'] as String,
+    description: map['description'] as String?,
+    origin: map['origin'] as String?,
+    inviteCode: map['invite_code'] as String?,
+    isPublic: (map['is_public'] as int) == 1,
+    createdBy: map['created_by'] as int?,
+    createdAt: map['created_at'] != null
+        ? DateTime.parse(map['created_at'] as String)
+        : null,
+    updatedAt: map['updated_at'] != null
+        ? DateTime.parse(map['updated_at'] as String)
+        : null,
+  );
 
   Map<String, dynamic> _personToMap(PersonModel person) => {
-        'id': person.id,
-        'family_id': person.familyId,
-        'first_name': person.firstName,
-        'last_name': person.lastName,
-        'gender': person.gender,
-        'birth_date': person.birthDate?.toIso8601String(),
-        'death_date': person.deathDate?.toIso8601String(),
-        'birth_place': person.birthPlace,
-        'death_place': person.deathPlace,
-        'occupation': person.occupation,
-        'bio': person.bio,
-        'avatar_url': person.avatarUrl,
-        'generation_level': person.generationLevel,
-        'created_at': person.createdAt?.toIso8601String(),
-        'updated_at': person.updatedAt?.toIso8601String(),
-        'pending_sync': 0,
-        'synced_at': DateTime.now().toIso8601String(),
-      };
+    'id': person.id,
+    'family_id': person.familyId,
+    'first_name': person.firstName,
+    'last_name': person.lastName,
+    'gender': person.gender,
+    'birth_date': person.birthDate?.toIso8601String(),
+    'death_date': person.deathDate?.toIso8601String(),
+    'birth_place': person.birthPlace,
+    'death_place': person.deathPlace,
+    'occupation': person.occupation,
+    'bio': person.bio,
+    'avatar_url': person.avatarUrl,
+    'generation_level': person.generationLevel,
+    'created_at': person.createdAt?.toIso8601String(),
+    'updated_at': person.updatedAt?.toIso8601String(),
+    'pending_sync': 0,
+    'synced_at': DateTime.now().toIso8601String(),
+  };
 
   PersonModel _personFromMap(Map<String, dynamic> map) => PersonModel(
-        id: map['id'] as int,
-        familyId: map['family_id'] as int,
-        firstName: map['first_name'] as String,
-        lastName: map['last_name'] as String?,
-        gender: map['gender'] as String?,
-        birthDate: map['birth_date'] != null
-            ? DateTime.parse(map['birth_date'] as String)
-            : null,
-        deathDate: map['death_date'] != null
-            ? DateTime.parse(map['death_date'] as String)
-            : null,
-        birthPlace: map['birth_place'] as String?,
-        deathPlace: map['death_place'] as String?,
-        occupation: map['occupation'] as String?,
-        bio: map['bio'] as String?,
-        avatarUrl: map['avatar_url'] as String?,
-        generationLevel: map['generation_level'] as int? ?? 0,
-        createdAt: map['created_at'] != null
-            ? DateTime.parse(map['created_at'] as String)
-            : null,
-        updatedAt: map['updated_at'] != null
-            ? DateTime.parse(map['updated_at'] as String)
-            : null,
-      );
+    id: map['id'] as int,
+    familyId: map['family_id'] as int,
+    firstName: map['first_name'] as String,
+    lastName: map['last_name'] as String?,
+    gender: map['gender'] as String?,
+    birthDate: map['birth_date'] != null
+        ? DateTime.parse(map['birth_date'] as String)
+        : null,
+    deathDate: map['death_date'] != null
+        ? DateTime.parse(map['death_date'] as String)
+        : null,
+    birthPlace: map['birth_place'] as String?,
+    deathPlace: map['death_place'] as String?,
+    occupation: map['occupation'] as String?,
+    bio: map['bio'] as String?,
+    avatarUrl: map['avatar_url'] as String?,
+    generationLevel: map['generation_level'] as int? ?? 0,
+    createdAt: map['created_at'] != null
+        ? DateTime.parse(map['created_at'] as String)
+        : null,
+    updatedAt: map['updated_at'] != null
+        ? DateTime.parse(map['updated_at'] as String)
+        : null,
+  );
 
   Map<String, dynamic> _relationshipToMap(RelationshipModel rel) => {
-        'id': rel.id,
-        'person_id': rel.personId,
-        'related_person_id': rel.relatedPersonId,
-        'type': rel.type,
-        'marriage_status': rel.marriageStatus,
-        'marriage_date': rel.marriageDate?.toIso8601String(),
-        'divorce_date': rel.divorceDate?.toIso8601String(),
-        'created_at': rel.createdAt?.toIso8601String(),
-        'updated_at': rel.updatedAt?.toIso8601String(),
-        'pending_sync': 0,
-        'synced_at': DateTime.now().toIso8601String(),
-      };
+    'id': rel.id,
+    'person_id': rel.personId,
+    'related_person_id': rel.relatedPersonId,
+    'type': rel.type,
+    'marriage_status': rel.marriageStatus,
+    'marriage_date': rel.marriageDate?.toIso8601String(),
+    'divorce_date': rel.divorceDate?.toIso8601String(),
+    'created_at': rel.createdAt?.toIso8601String(),
+    'updated_at': rel.updatedAt?.toIso8601String(),
+    'pending_sync': 0,
+    'synced_at': DateTime.now().toIso8601String(),
+  };
 
-  RelationshipModel _relationshipFromMap(Map<String, dynamic> map) => RelationshipModel(
+  RelationshipModel _relationshipFromMap(Map<String, dynamic> map) =>
+      RelationshipModel(
         id: map['id'] as int,
         personId: map['person_id'] as int,
         relatedPersonId: map['related_person_id'] as int,
@@ -543,18 +581,19 @@ class FamilyLocalDataSourceImpl implements FamilyLocalDataSource {
       );
 
   Map<String, dynamic> _treePositionToMap(TreePositionModel pos) => {
-        'id': pos.id,
-        'person_id': pos.personId,
-        'family_id': pos.familyId,
-        'x': pos.x,
-        'y': pos.y,
-        'level': pos.level,
-        'sort_order': pos.order,
-        'created_at': pos.createdAt?.toIso8601String(),
-        'updated_at': pos.updatedAt?.toIso8601String(),
-      };
+    'id': pos.id,
+    'person_id': pos.personId,
+    'family_id': pos.familyId,
+    'x': pos.x,
+    'y': pos.y,
+    'level': pos.level,
+    'sort_order': pos.order,
+    'created_at': pos.createdAt?.toIso8601String(),
+    'updated_at': pos.updatedAt?.toIso8601String(),
+  };
 
-  TreePositionModel _treePositionFromMap(Map<String, dynamic> map) => TreePositionModel(
+  TreePositionModel _treePositionFromMap(Map<String, dynamic> map) =>
+      TreePositionModel(
         id: map['id'] as int,
         personId: map['person_id'] as int,
         familyId: map['family_id'] as int,

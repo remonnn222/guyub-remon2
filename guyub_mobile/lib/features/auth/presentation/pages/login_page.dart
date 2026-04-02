@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../config/theme/app_colors.dart';
 import '../../../../config/theme/app_spacing.dart';
 import '../../../../config/theme/app_typography.dart';
+import '../../../../core/di/injection_container.dart';
+import '../../../../core/security/biometric_service.dart';
 import '../../../../core/utils/input_sanitizer.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_text_field.dart';
@@ -24,6 +26,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _rememberMe = false;
 
   @override
   void dispose() {
@@ -54,20 +57,86 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       final warning = rateLimiter.warningMessage;
       if (warning.isNotEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(warning),
-            backgroundColor: AppColors.warning,
-          ),
+          SnackBar(content: Text(warning), backgroundColor: AppColors.warning),
         );
       }
 
       // Sanitize email before sending
-      final sanitizedEmail = InputSanitizer.sanitizeEmail(_emailController.text);
+      final sanitizedEmail = InputSanitizer.sanitizeEmail(
+        _emailController.text,
+      );
 
-      ref.read(authProvider.notifier).login(
+      ref
+          .read(authProvider.notifier)
+          .login(
             sanitizedEmail,
             _passwordController.text,
+            rememberMe: _rememberMe,
           );
+    }
+  }
+
+  /// Handle biometric login
+  Future<void> _handleBiometricLogin() async {
+    try {
+      final biometricService = sl<BiometricService>();
+
+      // Check if biometric is available
+      final isSupported = await biometricService.isSupported;
+      final isEnrolled = await biometricService.isEnrolled;
+
+      if (!isSupported) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Perangkat Anda tidak mendukung biometric'),
+          ),
+        );
+        return;
+      }
+
+      if (!isEnrolled) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Silakan daftar sidik jari atau face ID terlebih dahulu',
+            ),
+          ),
+        );
+        return;
+      }
+
+      if (_formKey.currentState?.validate() ?? false) {
+        // Check rate limiter
+        final rateLimiter = ref.read(loginRateLimiterProvider);
+        if (rateLimiter.isLockedOut) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(rateLimiter.lockoutMessage),
+              backgroundColor: AppColors.error,
+            ),
+          );
+          return;
+        }
+
+        rateLimiter.recordAttempt();
+
+        final sanitizedEmail = InputSanitizer.sanitizeEmail(
+          _emailController.text,
+        );
+
+        // Try to login with email and password via biometric verification
+        ref
+            .read(authProvider.notifier)
+            .login(sanitizedEmail, _passwordController.text, rememberMe: true);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gagal memproses biometric')),
+      );
     }
   }
 
@@ -76,12 +145,18 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final isLoading = ref.watch(isAuthLoadingProvider);
     final error = ref.watch(authErrorProvider);
 
-    // Navigate on successful login and reset rate limiter
+    // Navigate on successful login and show biometric dialog if applicable
     ref.listen(authProvider, (previous, next) {
       if (next is AuthStateAuthenticated) {
         // Reset rate limiter on successful login
         ref.read(loginRateLimiterProvider).reset();
-        context.go('/dashboard');
+
+        // Show biometric enable dialog if not already enabled
+        _showEnableBiometricDialog(next.user.email);
+
+        if (mounted) {
+          context.go('/dashboard');
+        }
       }
     });
 
@@ -125,6 +200,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         isLoading: isLoading,
                         isFullWidth: true,
                       ),
+
+                      AppSpacing.height12,
+
+                      // Biometric Button
+                      _buildBiometricButton(isLoading),
 
                       AppSpacing.height16,
 
@@ -174,10 +254,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           ),
         ),
         AppSpacing.height32,
-        Text(
-          'Masuk ke Akun Anda',
-          style: AppTypography.titleLarge,
-        ),
+        Text('Masuk ke Akun Anda', style: AppTypography.titleLarge),
       ],
     );
   }
@@ -228,7 +305,127 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           ]),
           onFieldSubmitted: (_) => _handleLogin(),
         ),
+
+        AppSpacing.height12,
+
+        // Remember Me Checkbox
+        Row(
+          children: [
+            Checkbox(
+              value: _rememberMe,
+              onChanged: isLoading
+                  ? null
+                  : (value) {
+                      setState(() {
+                        _rememberMe = value ?? false;
+                      });
+                    },
+              checkColor: AppColors.primary,
+              activeColor: AppColors.primaryBackground,
+            ),
+            Expanded(
+              child: GestureDetector(
+                onTap: isLoading
+                    ? null
+                    : () {
+                        setState(() {
+                          _rememberMe = !_rememberMe;
+                        });
+                      },
+                child: Text(
+                  'Ingat Saya',
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: isLoading
+                        ? AppColors.textSecondary
+                        : AppColors.textPrimary,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ],
+    );
+  }
+
+  Widget _buildBiometricButton(bool isLoading) {
+    return SizedBox(
+      height: 48,
+      child: OutlinedButton.icon(
+        onPressed: isLoading ? null : _handleBiometricLogin,
+        icon: const Icon(Icons.fingerprint),
+        label: const Text('Login Biometrik'),
+        style: OutlinedButton.styleFrom(
+          side: BorderSide(
+            color: isLoading ? AppColors.border : AppColors.primary,
+          ),
+          foregroundColor: isLoading
+              ? AppColors.textSecondary
+              : AppColors.primary,
+        ),
+      ),
+    );
+  }
+
+  /// Show dialog to enable biometric login after successful login
+  Future<void> _showEnableBiometricDialog(String email) async {
+    // Don't show dialog if biometric is already enabled
+    final biometricService = sl<BiometricService>();
+    final isEnabled = await biometricService.isBiometricLoginEnabled;
+
+    if (isEnabled || !mounted) return;
+
+    // Check if device supports biometric
+    final isSupported = await biometricService.isSupported;
+    final isEnrolled = await biometricService.isEnrolled;
+
+    if (!isSupported || !isEnrolled || !mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Aktifkan Login Biometrik?'),
+        content: const Text(
+          'Anda dapat login dengan lebih cepat menggunakan sidik jari atau face ID Anda.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Nanti'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+
+              // Enable biometric login
+              final success = await biometricService.enableBiometricLogin(
+                email: email,
+                password: _passwordController.text,
+              );
+
+              if (!mounted) return;
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    success
+                        ? 'Login biometrik berhasil diaktifkan'
+                        : 'Gagal mengaktifkan login biometrik',
+                  ),
+                  backgroundColor: success
+                      ? AppColors.success
+                      : AppColors.error,
+                ),
+              );
+
+              // Clear password field for security
+              _passwordController.clear();
+            },
+            style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+            child: const Text('Aktifkan'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -242,18 +439,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       ),
       child: Row(
         children: [
-          const Icon(
-            Icons.error_outline,
-            color: AppColors.error,
-            size: 20,
-          ),
+          const Icon(Icons.error_outline, color: AppColors.error, size: 20),
           AppSpacing.width8,
           Expanded(
             child: Text(
               error,
-              style: AppTypography.bodySmall.copyWith(
-                color: AppColors.error,
-              ),
+              style: AppTypography.bodySmall.copyWith(color: AppColors.error),
             ),
           ),
         ],
@@ -271,17 +462,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           },
           child: Text(
             'Lupa Password?',
-            style: AppTypography.bodyMedium.copyWith(
-              color: AppColors.primary,
-            ),
+            style: AppTypography.bodyMedium.copyWith(color: AppColors.primary),
           ),
         ),
         AppSpacing.height16,
         // Version Info
-        Text(
-          'Guyub v1.0.0',
-          style: AppTypography.caption,
-        ),
+        Text('Guyub v1.0.0', style: AppTypography.caption),
       ],
     );
   }

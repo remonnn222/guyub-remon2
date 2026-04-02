@@ -58,6 +58,12 @@ class ApiConstants {
   static const String treePositions = '/tree-positions';
   static const String treePositionsBulkUpdate = '/tree-positions/bulk';
 
+  // Endpoints - Events **NEW**
+  static const String events = '/events';
+  static const String eventDetail = '/events/{id}';
+  static const String eventApprove = '/events/{id}/approve';
+  static const String eventReject = '/events/{id}/reject';
+
   // Endpoints - Master Data
   static const String masterTypes = '/master/types';
   static const String masterValues = '/master/values';
@@ -86,7 +92,6 @@ class ApiConstants {
   static const int maxLimit = 100;
 
   /// Build endpoint with path parameters
-  /// Example: buildPath('/users/{id}', {'id': '123'}) => '/users/123'
   static String buildPath(String endpoint, Map<String, String> params) {
     String result = endpoint;
     params.forEach((key, value) {

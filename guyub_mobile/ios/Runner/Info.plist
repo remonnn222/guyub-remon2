@@ -45,5 +45,10 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- Associated Domains for Deep Linking -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:guyub.id</string>
+	</array>
 </dict>
 </plist>

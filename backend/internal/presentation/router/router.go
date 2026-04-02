@@ -9,17 +9,18 @@ import (
 )
 
 type Router struct {
-	engine           *gin.Engine
-	authMiddleware   *middleware.AuthMiddleware
-	authHandler      *handler.AuthHandler
-	userHandler      *handler.UserHandler
-	roleHandler      *handler.RoleHandler
-	masterHandler    *handler.MasterHandler
-	analyticsHandler *handler.AnalyticsHandler
-	activityHandler  *handler.ActivityHandler
-	auditHandler     *handler.AuditHandler
-	assetHandler     *handler.AssetHandler
-	storagePath      string
+	engine              *gin.Engine
+	authMiddleware      *middleware.AuthMiddleware
+	authHandler         *handler.AuthHandler
+	userHandler         *handler.UserHandler
+	roleHandler         *handler.RoleHandler
+	masterHandler       *handler.MasterHandler
+	analyticsHandler    *handler.AnalyticsHandler
+	activityHandler     *handler.ActivityHandler
+	auditHandler        *handler.AuditHandler
+	assetHandler        *handler.AssetHandler
+	notificationHandler *handler.NotificationHandler
+	storagePath         string
 }
 
 type Config struct {
@@ -39,6 +40,7 @@ func New(
 	activityHandler *handler.ActivityHandler,
 	auditHandler *handler.AuditHandler,
 	assetHandler *handler.AssetHandler,
+	notificationHandler *handler.NotificationHandler,
 	cfg *Config,
 ) *Router {
 	engine := gin.New()
@@ -56,17 +58,18 @@ func New(
 	}))
 
 	return &Router{
-		engine:           engine,
-		authMiddleware:   authMiddleware,
-		authHandler:      authHandler,
-		userHandler:      userHandler,
-		roleHandler:      roleHandler,
-		masterHandler:    masterHandler,
-		analyticsHandler: analyticsHandler,
-		activityHandler:  activityHandler,
-		auditHandler:     auditHandler,
-		assetHandler:     assetHandler,
-		storagePath:      cfg.StoragePath,
+		engine:              engine,
+		authMiddleware:      authMiddleware,
+		authHandler:         authHandler,
+		userHandler:         userHandler,
+		roleHandler:         roleHandler,
+		masterHandler:       masterHandler,
+		analyticsHandler:    analyticsHandler,
+		activityHandler:     activityHandler,
+		auditHandler:        auditHandler,
+		assetHandler:        assetHandler,
+		notificationHandler: notificationHandler,
+		storagePath:         cfg.StoragePath,
 	}
 }
 
@@ -95,6 +98,7 @@ func (r *Router) Setup() *gin.Engine {
 			{
 				protectedAuth.POST("/logout", r.authHandler.Logout)
 				protectedAuth.GET("/me", r.authHandler.Me)
+				protectedAuth.POST("/fcm-token", r.authHandler.SaveFCMToken)
 			}
 
 			// Users
@@ -193,6 +197,16 @@ func (r *Router) Setup() *gin.Engine {
 				assets.GET("/:id", r.assetHandler.Show)
 				assets.DELETE("/:id", r.assetHandler.Delete)
 				assets.POST("/:id/link", r.assetHandler.LinkToRef)
+			}
+
+			// Notifications
+			notifications := protected.Group("/notifications")
+			{
+				notifications.POST("/send", middleware.RequirePermission("notifications.send"), r.notificationHandler.SendNotification)
+				notifications.POST("/event", middleware.RequirePermission("notifications.send"), r.notificationHandler.SendEventNotification)
+				notifications.POST("/family", middleware.RequirePermission("notifications.send"), r.notificationHandler.SendFamilyNotification)
+				notifications.POST("/system", middleware.RequirePermission("notifications.send"), r.notificationHandler.SendSystemNotification)
+				notifications.GET("", middleware.RequirePermission("notifications.view"), r.notificationHandler.ListUserNotifications)
 			}
 		}
 	}

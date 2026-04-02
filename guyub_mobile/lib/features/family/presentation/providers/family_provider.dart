@@ -12,6 +12,16 @@ final familyRepositoryProvider = Provider<FamilyRepository>((ref) {
   return sl<FamilyRepository>();
 });
 
+/// Pending sync queue count provider
+final pendingSyncCountProvider = StreamProvider<int>((ref) async* {
+  final repository = ref.read(familyRepositoryProvider);
+  while (true) {
+    final result = await repository.getPendingSyncCount();
+    yield result.fold((_) => 0, (count) => count);
+    await Future.delayed(const Duration(seconds: 3));
+  }
+});
+
 /// Family List Notifier
 @riverpod
 class FamilyListNotifier extends _$FamilyListNotifier {
@@ -40,18 +50,17 @@ class FamilyListNotifier extends _$FamilyListNotifier {
 
     final result = await _repository.createFamily(params);
 
-    result.fold(
-      (failure) => state = FamilyListError(failure.message),
-      (newFamily) {
-        if (currentState is FamilyListLoaded) {
-          state = FamilyListLoaded(
-            families: [newFamily, ...currentState.families],
-          );
-        } else {
-          loadFamilies();
-        }
-      },
-    );
+    result.fold((failure) => state = FamilyListError(failure.message), (
+      newFamily,
+    ) {
+      if (currentState is FamilyListLoaded) {
+        state = FamilyListLoaded(
+          families: [newFamily, ...currentState.families],
+        );
+      } else {
+        loadFamilies();
+      }
+    });
   }
 
   Future<void> joinFamily(String inviteCode) async {
@@ -70,16 +79,13 @@ class FamilyListNotifier extends _$FamilyListNotifier {
 
     final result = await _repository.deleteFamily(id);
 
-    result.fold(
-      (failure) => state = FamilyListError(failure.message),
-      (_) {
-        if (currentState is FamilyListLoaded) {
-          state = FamilyListLoaded(
-            families: currentState.families.where((f) => f.id != id).toList(),
-          );
-        }
-      },
-    );
+    result.fold((failure) => state = FamilyListError(failure.message), (_) {
+      if (currentState is FamilyListLoaded) {
+        state = FamilyListLoaded(
+          families: currentState.families.where((f) => f.id != id).toList(),
+        );
+      }
+    });
   }
 }
 
@@ -135,7 +141,10 @@ class FamilyTreeNotifier extends _$FamilyTreeNotifier {
   Future<void> updatePositions(List<TreePosition> positions) async {
     if (_currentFamilyId == null) return;
 
-    final result = await _repository.updateTreePositions(_currentFamilyId!, positions);
+    final result = await _repository.updateTreePositions(
+      _currentFamilyId!,
+      positions,
+    );
 
     result.fold(
       (failure) {
@@ -215,7 +224,9 @@ class RelationshipFormNotifier extends _$RelationshipFormNotifier {
 
     result.fold(
       (failure) => state = RelationshipFormError(failure.message),
-      (_) => state = const RelationshipFormSuccess('Hubungan berhasil ditambahkan'),
+      (_) => state = const RelationshipFormSuccess(
+        'Hubungan berhasil ditambahkan',
+      ),
     );
   }
 
@@ -237,9 +248,9 @@ class RelationshipFormNotifier extends _$RelationshipFormNotifier {
 
 /// Tree View Mode Enum
 enum TreeViewMode {
-  auto,  // Switch based on screen size
+  auto, // Switch based on screen size
   graph, // Always show graph view
-  list,  // Always show list view
+  list, // Always show list view
 }
 
 /// Selected Person Notifier (for detail view)
@@ -269,7 +280,8 @@ class TreeViewModeNotifier extends _$TreeViewModeNotifier {
 
   void toggle(bool showGraphView) {
     state = switch (state) {
-      TreeViewMode.auto => showGraphView ? TreeViewMode.list : TreeViewMode.graph,
+      TreeViewMode.auto =>
+        showGraphView ? TreeViewMode.list : TreeViewMode.graph,
       TreeViewMode.graph => TreeViewMode.list,
       TreeViewMode.list => TreeViewMode.graph,
     };

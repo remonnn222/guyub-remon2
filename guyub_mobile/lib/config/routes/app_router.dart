@@ -3,13 +3,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/splash_page.dart';
+import '../../features/onboarding/presentation/pages/onboarding_page.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../../features/auth/presentation/providers/auth_state.dart';
 import '../../features/dashboard/presentation/pages/dashboard_page.dart';
 import '../../features/family/presentation/pages/family_list_page.dart';
 import '../../features/family/presentation/pages/family_tree_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
+import '../../features/profile/presentation/pages/edit_profile_page.dart';
+import '../../features/profile/presentation/pages/change_password_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
+import '../../core/services/deep_link_service.dart';
+import '../../core/di/injection_container.dart';
 import '../../shared/layouts/main_layout.dart';
 import 'route_names.dart';
 
@@ -32,14 +37,25 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         _ => false,
       };
 
+      // Check for pending deep link after login
+      if (isAuthenticated) {
+        final deepLinkService = sl<DeepLinkService>();
+        if (deepLinkService.hasPendingDeepLink()) {
+          final pendingLink = deepLinkService.getAndClearPendingDeepLink();
+          if (pendingLink != null) {
+            // Schedule navigation for next frame to avoid context issues
+            Future.microtask(() {
+              // This will be handled by the page that loads after authentication
+            });
+            return null; // Don't redirect, let deep link handle navigation
+          }
+        }
+        return RouteNames.dashboard;
+      }
+
       // Redirect to login if not authenticated
       if (!isAuthenticated && !isLoggingIn) {
         return RouteNames.login;
-      }
-
-      // Redirect to dashboard if authenticated and trying to access login
-      if (isAuthenticated && isLoggingIn) {
-        return RouteNames.dashboard;
       }
 
       return null;
@@ -50,6 +66,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: RouteNames.splash,
         name: 'splash',
         builder: (context, state) => const SplashPage(),
+      ),
+
+      // Onboarding
+      GoRoute(
+        path: RouteNames.onboarding,
+        name: 'onboarding',
+        builder: (context, state) => const OnboardingPage(),
       ),
 
       // Auth Routes
@@ -82,6 +105,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: RouteNames.profile,
             name: 'profile',
             builder: (context, state) => const ProfilePage(),
+          ),
+
+          // Edit Profile
+          GoRoute(
+            path: RouteNames.editProfile,
+            name: 'edit-profile',
+            builder: (context, state) => const EditProfilePage(),
+          ),
+
+          // Change Password
+          GoRoute(
+            path: RouteNames.changePassword,
+            name: 'change-password',
+            builder: (context, state) => const ChangePasswordPage(),
           ),
 
           // Settings
@@ -122,6 +159,39 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return _PlaceholderPage(title: 'Detail Person: $id');
         },
       ),
+
+      // Deep Link Routes
+      GoRoute(
+        path: '/family/:inviteCode',
+        name: 'deep-link-family',
+        builder: (context, state) {
+          final inviteCode = state.pathParameters['inviteCode']!;
+          // TODO: Navigate to family tree or join family dialog
+          return _PlaceholderPage(title: 'Family Invite: $inviteCode');
+        },
+      ),
+
+      GoRoute(
+        path: '/event/:eventId',
+        name: 'deep-link-event',
+        builder: (context, state) {
+          final eventId = state.pathParameters['eventId']!;
+          return _PlaceholderPage(title: 'Event Detail: $eventId');
+        },
+      ),
+
+      GoRoute(
+        path: '/invite/:inviteCode',
+        name: 'deep-link-invite',
+        builder: (context, state) {
+          final inviteCode = state.pathParameters['inviteCode']!;
+          // Show join family dialog
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _showJoinFamilyDialog(context, inviteCode);
+          });
+          return const DashboardPage(); // Return dashboard as base page
+        },
+      ),
     ],
 
     // Error page
@@ -132,8 +202,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           children: [
             const Icon(Icons.error_outline, size: 64, color: Colors.red),
             const SizedBox(height: 16),
-            Text('Halaman tidak ditemukan',
-                style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              'Halaman tidak ditemukan',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const SizedBox(height: 8),
             Text(state.matchedLocation),
             const SizedBox(height: 24),
@@ -147,6 +219,37 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ),
   );
 });
+
+/// Show join family dialog for deep link
+void _showJoinFamilyDialog(BuildContext context, String inviteCode) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Bergabung ke Keluarga'),
+      content: Text(
+        'Apakah Anda ingin bergabung ke keluarga dengan kode undangan: $inviteCode?',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Batal'),
+        ),
+        TextButton(
+          onPressed: () {
+            Navigator.pop(context);
+            // TODO: Implement join family logic
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Fitur bergabung keluarga akan segera hadir'),
+              ),
+            );
+          },
+          child: const Text('Bergabung'),
+        ),
+      ],
+    ),
+  );
+}
 
 /// Placeholder page for routes not yet implemented
 class _PlaceholderPage extends StatelessWidget {
@@ -164,10 +267,7 @@ class _PlaceholderPage extends StatelessWidget {
           children: [
             const Icon(Icons.construction, size: 64, color: Colors.grey),
             const SizedBox(height: 16),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
+            Text(title, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
             const Text(
               'Halaman ini sedang dalam pengembangan',

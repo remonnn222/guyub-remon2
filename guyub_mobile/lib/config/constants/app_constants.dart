@@ -16,6 +16,7 @@ class AppConstants {
   static const String keyLanguage = 'language';
   static const String keyOnboardingComplete = 'onboarding_complete';
   static const String keyLastSync = 'last_sync';
+  static const String keyRememberMe = 'remember_me';
 
   // Database
   static const String dbName = 'guyub_local.db';

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:dartz/dartz.dart';
 import '../../../../core/error/failures.dart';
 import '../../../../core/error/exceptions.dart';
@@ -130,7 +132,9 @@ class FamilyRepositoryImpl implements FamilyRepository {
   }
 
   @override
-  Future<Either<Failure, Family>> createFamily(CreateFamilyParams params) async {
+  Future<Either<Failure, Family>> createFamily(
+    CreateFamilyParams params,
+  ) async {
     if (await networkInfo.isConnected) {
       try {
         final remoteFamily = await remoteDataSource.createFamily(params);
@@ -141,18 +145,25 @@ class FamilyRepositoryImpl implements FamilyRepository {
       }
     } else {
       // Queue for later sync
-      await localDataSource.addToSyncQueue(SyncQueueItem(
-        action: SyncAction.create,
-        entityType: SyncEntityType.family,
-        payload: params.toJson(),
-        createdAt: DateTime.now(),
-      ));
-      return const Left(NetworkFailure(message: 'Offline: Family will be created when online'));
+      await localDataSource.addToSyncQueue(
+        SyncQueueItem(
+          action: SyncAction.create,
+          entityType: SyncEntityType.family,
+          payload: params.toJson(),
+          createdAt: DateTime.now(),
+        ),
+      );
+      return const Left(
+        NetworkFailure(message: 'Offline: Family will be created when online'),
+      );
     }
   }
 
   @override
-  Future<Either<Failure, Family>> updateFamily(int id, UpdateFamilyParams params) async {
+  Future<Either<Failure, Family>> updateFamily(
+    int id,
+    UpdateFamilyParams params,
+  ) async {
     if (await networkInfo.isConnected) {
       try {
         final remoteFamily = await remoteDataSource.updateFamily(id, params);
@@ -163,14 +174,18 @@ class FamilyRepositoryImpl implements FamilyRepository {
       }
     } else {
       // Queue for later sync
-      await localDataSource.addToSyncQueue(SyncQueueItem(
-        action: SyncAction.update,
-        entityType: SyncEntityType.family,
-        entityId: id,
-        payload: params.toJson(),
-        createdAt: DateTime.now(),
-      ));
-      return const Left(NetworkFailure(message: 'Offline: Family will be updated when online'));
+      await localDataSource.addToSyncQueue(
+        SyncQueueItem(
+          action: SyncAction.update,
+          entityType: SyncEntityType.family,
+          entityId: id,
+          payload: params.toJson(),
+          createdAt: DateTime.now(),
+        ),
+      );
+      return const Left(
+        NetworkFailure(message: 'Offline: Family will be updated when online'),
+      );
     }
   }
 
@@ -186,13 +201,15 @@ class FamilyRepositoryImpl implements FamilyRepository {
       }
     } else {
       // Queue for later sync
-      await localDataSource.addToSyncQueue(SyncQueueItem(
-        action: SyncAction.delete,
-        entityType: SyncEntityType.family,
-        entityId: id,
-        payload: {'id': id},
-        createdAt: DateTime.now(),
-      ));
+      await localDataSource.addToSyncQueue(
+        SyncQueueItem(
+          action: SyncAction.delete,
+          entityType: SyncEntityType.family,
+          entityId: id,
+          payload: {'id': id},
+          createdAt: DateTime.now(),
+        ),
+      );
       await localDataSource.deleteFamily(id);
       return const Right(null);
     }
@@ -201,7 +218,9 @@ class FamilyRepositoryImpl implements FamilyRepository {
   @override
   Future<Either<Failure, Family>> joinFamily(String inviteCode) async {
     if (!await networkInfo.isConnected) {
-      return const Left(NetworkFailure(message: 'Internet required to join family'));
+      return const Left(
+        NetworkFailure(message: 'Internet required to join family'),
+      );
     }
 
     try {
@@ -266,7 +285,9 @@ class FamilyRepositoryImpl implements FamilyRepository {
   }
 
   @override
-  Future<Either<Failure, Person>> createPerson(CreatePersonParams params) async {
+  Future<Either<Failure, Person>> createPerson(
+    CreatePersonParams params,
+  ) async {
     if (await networkInfo.isConnected) {
       try {
         final remotePerson = await remoteDataSource.createPerson(params);
@@ -276,18 +297,25 @@ class FamilyRepositoryImpl implements FamilyRepository {
         return Left(_handleError(e));
       }
     } else {
-      await localDataSource.addToSyncQueue(SyncQueueItem(
-        action: SyncAction.create,
-        entityType: SyncEntityType.person,
-        payload: params.toJson(),
-        createdAt: DateTime.now(),
-      ));
-      return const Left(NetworkFailure(message: 'Offline: Person will be created when online'));
+      await localDataSource.addToSyncQueue(
+        SyncQueueItem(
+          action: SyncAction.create,
+          entityType: SyncEntityType.person,
+          payload: params.toJson(),
+          createdAt: DateTime.now(),
+        ),
+      );
+      return const Left(
+        NetworkFailure(message: 'Offline: Person will be created when online'),
+      );
     }
   }
 
   @override
-  Future<Either<Failure, Person>> updatePerson(int id, UpdatePersonParams params) async {
+  Future<Either<Failure, Person>> updatePerson(
+    int id,
+    UpdatePersonParams params,
+  ) async {
     if (await networkInfo.isConnected) {
       try {
         final remotePerson = await remoteDataSource.updatePerson(id, params);
@@ -297,14 +325,18 @@ class FamilyRepositoryImpl implements FamilyRepository {
         return Left(_handleError(e));
       }
     } else {
-      await localDataSource.addToSyncQueue(SyncQueueItem(
-        action: SyncAction.update,
-        entityType: SyncEntityType.person,
-        entityId: id,
-        payload: params.toJson(),
-        createdAt: DateTime.now(),
-      ));
-      return const Left(NetworkFailure(message: 'Offline: Person will be updated when online'));
+      await localDataSource.addToSyncQueue(
+        SyncQueueItem(
+          action: SyncAction.update,
+          entityType: SyncEntityType.person,
+          entityId: id,
+          payload: params.toJson(),
+          createdAt: DateTime.now(),
+        ),
+      );
+      return const Left(
+        NetworkFailure(message: 'Offline: Person will be updated when online'),
+      );
     }
   }
 
@@ -319,20 +351,24 @@ class FamilyRepositoryImpl implements FamilyRepository {
         return Left(_handleError(e));
       }
     } else {
-      await localDataSource.addToSyncQueue(SyncQueueItem(
-        action: SyncAction.delete,
-        entityType: SyncEntityType.person,
-        entityId: id,
-        payload: {'id': id},
-        createdAt: DateTime.now(),
-      ));
+      await localDataSource.addToSyncQueue(
+        SyncQueueItem(
+          action: SyncAction.delete,
+          entityType: SyncEntityType.person,
+          entityId: id,
+          payload: {'id': id},
+          createdAt: DateTime.now(),
+        ),
+      );
       await localDataSource.deletePerson(id);
       return const Right(null);
     }
   }
 
   @override
-  Future<Either<Failure, Relationship>> createRelationship(CreateRelationshipParams params) async {
+  Future<Either<Failure, Relationship>> createRelationship(
+    CreateRelationshipParams params,
+  ) async {
     if (await networkInfo.isConnected) {
       try {
         final remoteRel = await remoteDataSource.createRelationship(params);
@@ -342,13 +378,19 @@ class FamilyRepositoryImpl implements FamilyRepository {
         return Left(_handleError(e));
       }
     } else {
-      await localDataSource.addToSyncQueue(SyncQueueItem(
-        action: SyncAction.create,
-        entityType: SyncEntityType.relationship,
-        payload: params.toJson(),
-        createdAt: DateTime.now(),
-      ));
-      return const Left(NetworkFailure(message: 'Offline: Relationship will be created when online'));
+      await localDataSource.addToSyncQueue(
+        SyncQueueItem(
+          action: SyncAction.create,
+          entityType: SyncEntityType.relationship,
+          payload: params.toJson(),
+          createdAt: DateTime.now(),
+        ),
+      );
+      return const Left(
+        NetworkFailure(
+          message: 'Offline: Relationship will be created when online',
+        ),
+      );
     }
   }
 
@@ -363,21 +405,28 @@ class FamilyRepositoryImpl implements FamilyRepository {
         return Left(_handleError(e));
       }
     } else {
-      await localDataSource.addToSyncQueue(SyncQueueItem(
-        action: SyncAction.delete,
-        entityType: SyncEntityType.relationship,
-        entityId: id,
-        payload: {'id': id},
-        createdAt: DateTime.now(),
-      ));
+      await localDataSource.addToSyncQueue(
+        SyncQueueItem(
+          action: SyncAction.delete,
+          entityType: SyncEntityType.relationship,
+          entityId: id,
+          payload: {'id': id},
+          createdAt: DateTime.now(),
+        ),
+      );
       await localDataSource.deleteRelationship(id);
       return const Right(null);
     }
   }
 
   @override
-  Future<Either<Failure, void>> updateTreePositions(int familyId, List<TreePosition> positions) async {
-    final positionModels = positions.map((p) => TreePositionModel.fromEntity(p)).toList();
+  Future<Either<Failure, void>> updateTreePositions(
+    int familyId,
+    List<TreePosition> positions,
+  ) async {
+    final positionModels = positions
+        .map((p) => TreePositionModel.fromEntity(p))
+        .toList();
 
     if (await networkInfo.isConnected) {
       try {
@@ -389,19 +438,28 @@ class FamilyRepositoryImpl implements FamilyRepository {
       }
     } else {
       await localDataSource.saveTreePositions(positionModels);
-      await localDataSource.addToSyncQueue(SyncQueueItem(
-        action: SyncAction.update,
-        entityType: SyncEntityType.treePosition,
-        entityId: familyId,
-        payload: {'family_id': familyId, 'positions': positions.map((p) => {
-          'person_id': p.personId,
-          'x': p.x,
-          'y': p.y,
-          'level': p.level,
-          'order': p.order,
-        }).toList()},
-        createdAt: DateTime.now(),
-      ));
+      await localDataSource.addToSyncQueue(
+        SyncQueueItem(
+          action: SyncAction.update,
+          entityType: SyncEntityType.treePosition,
+          entityId: familyId,
+          payload: {
+            'family_id': familyId,
+            'positions': positions
+                .map(
+                  (p) => {
+                    'person_id': p.personId,
+                    'x': p.x,
+                    'y': p.y,
+                    'level': p.level,
+                    'order': p.order,
+                  },
+                )
+                .toList(),
+          },
+          createdAt: DateTime.now(),
+        ),
+      );
       return const Right(null);
     }
   }
@@ -416,16 +474,41 @@ class FamilyRepositoryImpl implements FamilyRepository {
       final pendingItems = await localDataSource.getPendingSyncItems();
 
       for (final item in pendingItems) {
+        if (item.retryCount >= 3) {
+          await localDataSource.markSyncFailed(
+            item.id!,
+            'Max retries exceeded',
+          );
+          continue;
+        }
+
+        // Exponential backoff based on current retry count (1s, 2s, 4s)
+        final delay = Duration(seconds: math.pow(2, item.retryCount).toInt());
+        if (delay > Duration.zero) {
+          await Future.delayed(delay);
+        }
+
         try {
           await _processSyncItem(item);
           await localDataSource.markSyncCompleted(item.id!);
         } catch (e) {
+          // increase retry count and keep pending if still retryable
           await localDataSource.markSyncFailed(item.id!, e.toString());
         }
       }
 
       await localDataSource.clearSyncQueue();
       return const Right(null);
+    } catch (e) {
+      return Left(_handleError(e));
+    }
+  }
+
+  @override
+  Future<Either<Failure, int>> getPendingSyncCount() async {
+    try {
+      final count = await localDataSource.getPendingSyncItemCount();
+      return Right(count);
     } catch (e) {
       return Left(_handleError(e));
     }
@@ -451,12 +534,14 @@ class FamilyRepositoryImpl implements FamilyRepository {
   Future<void> _syncFamily(SyncQueueItem item) async {
     switch (item.action) {
       case SyncAction.create:
-        await remoteDataSource.createFamily(CreateFamilyParams(
-          name: item.payload['name'] as String,
-          description: item.payload['description'] as String?,
-          origin: item.payload['origin'] as String?,
-          isPublic: item.payload['is_public'] as bool? ?? false,
-        ));
+        await remoteDataSource.createFamily(
+          CreateFamilyParams(
+            name: item.payload['name'] as String,
+            description: item.payload['description'] as String?,
+            origin: item.payload['origin'] as String?,
+            isPublic: item.payload['is_public'] as bool? ?? false,
+          ),
+        );
         break;
       case SyncAction.update:
         await remoteDataSource.updateFamily(
@@ -478,13 +563,15 @@ class FamilyRepositoryImpl implements FamilyRepository {
   Future<void> _syncPerson(SyncQueueItem item) async {
     switch (item.action) {
       case SyncAction.create:
-        await remoteDataSource.createPerson(CreatePersonParams(
-          familyId: item.payload['family_id'] as int,
-          firstName: item.payload['first_name'] as String,
-          lastName: item.payload['last_name'] as String?,
-          gender: item.payload['gender'] as String?,
-          generationLevel: item.payload['generation_level'] as int? ?? 0,
-        ));
+        await remoteDataSource.createPerson(
+          CreatePersonParams(
+            familyId: item.payload['family_id'] as int,
+            firstName: item.payload['first_name'] as String,
+            lastName: item.payload['last_name'] as String?,
+            gender: item.payload['gender'] as String?,
+            generationLevel: item.payload['generation_level'] as int? ?? 0,
+          ),
+        );
         break;
       case SyncAction.update:
         await remoteDataSource.updatePerson(
@@ -506,14 +593,16 @@ class FamilyRepositoryImpl implements FamilyRepository {
     switch (item.action) {
       case SyncAction.create:
         final typeStr = item.payload['type'] as String;
-        await remoteDataSource.createRelationship(CreateRelationshipParams(
-          personId: item.payload['person_id'] as int,
-          relatedPersonId: item.payload['related_person_id'] as int,
-          type: RelationshipType.values.firstWhere(
-            (e) => e.name == typeStr,
-            orElse: () => RelationshipType.parent,
+        await remoteDataSource.createRelationship(
+          CreateRelationshipParams(
+            personId: item.payload['person_id'] as int,
+            relatedPersonId: item.payload['related_person_id'] as int,
+            type: RelationshipType.values.firstWhere(
+              (e) => e.name == typeStr,
+              orElse: () => RelationshipType.parent,
+            ),
           ),
-        ));
+        );
         break;
       case SyncAction.update:
         // Relationships don't support update, only delete and create
@@ -527,15 +616,19 @@ class FamilyRepositoryImpl implements FamilyRepository {
   Future<void> _syncTreePositions(SyncQueueItem item) async {
     final familyId = item.payload['family_id'] as int;
     final positionsList = item.payload['positions'] as List;
-    final positions = positionsList.map((p) => TreePositionModel(
-      id: 0,
-      personId: p['person_id'] as int,
-      familyId: familyId,
-      x: (p['x'] as num).toDouble(),
-      y: (p['y'] as num).toDouble(),
-      level: p['level'] as int? ?? 0,
-      order: p['order'] as int? ?? 0,
-    )).toList();
+    final positions = positionsList
+        .map(
+          (p) => TreePositionModel(
+            id: 0,
+            personId: p['person_id'] as int,
+            familyId: familyId,
+            x: (p['x'] as num).toDouble(),
+            y: (p['y'] as num).toDouble(),
+            level: p['level'] as int? ?? 0,
+            order: p['order'] as int? ?? 0,
+          ),
+        )
+        .toList();
 
     await remoteDataSource.updateTreePositions(familyId, positions);
   }

@@ -47,7 +47,7 @@ final class AuthNotifierProvider
   }
 }
 
-String _$authNotifierHash() => r'756652e519e0fa2bdc2af3f2bde9d56aa37716d8';
+String _$authNotifierHash() => r'0bfdaf84d3507f0c6640a7f40781d437bd90d5e4';
 
 /// Auth State Notifier
 /// Manages authentication state using Riverpod
@@ -254,3 +254,206 @@ final class AuthErrorProvider
 }
 
 String _$authErrorHash() => r'ba0574734b6ffa6e6c32ca42a775b84df8b541f2';
+
+/// Check if biometric login is enabled
+
+@ProviderFor(isBiometricEnabled)
+final isBiometricEnabledProvider = IsBiometricEnabledProvider._();
+
+/// Check if biometric login is enabled
+
+final class IsBiometricEnabledProvider
+    extends $FunctionalProvider<AsyncValue<bool>, bool, FutureOr<bool>>
+    with $FutureModifier<bool>, $FutureProvider<bool> {
+  /// Check if biometric login is enabled
+  IsBiometricEnabledProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'isBiometricEnabledProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$isBiometricEnabledHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<bool> create(Ref ref) {
+    return isBiometricEnabled(ref);
+  }
+}
+
+String _$isBiometricEnabledHash() =>
+    r'a3ca9fe866fca06b8322a742978f186dc0dc65da';
+
+/// Get available biometric types on device
+
+@ProviderFor(availableBiometrics)
+final availableBiometricsProvider = AvailableBiometricsProvider._();
+
+/// Get available biometric types on device
+
+final class AvailableBiometricsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<AppBiometricType>>,
+          List<AppBiometricType>,
+          FutureOr<List<AppBiometricType>>
+        >
+    with
+        $FutureModifier<List<AppBiometricType>>,
+        $FutureProvider<List<AppBiometricType>> {
+  /// Get available biometric types on device
+  AvailableBiometricsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'availableBiometricsProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$availableBiometricsHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<List<AppBiometricType>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<AppBiometricType>> create(Ref ref) {
+    return availableBiometrics(ref);
+  }
+}
+
+String _$availableBiometricsHash() =>
+    r'2fc7ecc3bb8ad2cc8f453b595d89a27c022ce0db';
+
+/// Check if biometric is supported on device
+
+@ProviderFor(isBiometricSupported)
+final isBiometricSupportedProvider = IsBiometricSupportedProvider._();
+
+/// Check if biometric is supported on device
+
+final class IsBiometricSupportedProvider
+    extends $FunctionalProvider<AsyncValue<bool>, bool, FutureOr<bool>>
+    with $FutureModifier<bool>, $FutureProvider<bool> {
+  /// Check if biometric is supported on device
+  IsBiometricSupportedProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'isBiometricSupportedProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$isBiometricSupportedHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<bool> create(Ref ref) {
+    return isBiometricSupported(ref);
+  }
+}
+
+String _$isBiometricSupportedHash() =>
+    r'3810f827553877e1612bdcdc32dc6fcf7880165f';
+
+/// Check if biometric is enrolled on device
+
+@ProviderFor(isBiometricEnrolled)
+final isBiometricEnrolledProvider = IsBiometricEnrolledProvider._();
+
+/// Check if biometric is enrolled on device
+
+final class IsBiometricEnrolledProvider
+    extends $FunctionalProvider<AsyncValue<bool>, bool, FutureOr<bool>>
+    with $FutureModifier<bool>, $FutureProvider<bool> {
+  /// Check if biometric is enrolled on device
+  IsBiometricEnrolledProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'isBiometricEnrolledProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$isBiometricEnrolledHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<bool> create(Ref ref) {
+    return isBiometricEnrolled(ref);
+  }
+}
+
+String _$isBiometricEnrolledHash() =>
+    r'c5c13fa0ac171c65fb9fa127d11c957ec3962621';
+
+/// Remember Me Provider - checks if user has enabled remember me
+
+@ProviderFor(isRememberMeEnabled)
+final isRememberMeEnabledProvider = IsRememberMeEnabledProvider._();
+
+/// Remember Me Provider - checks if user has enabled remember me
+
+final class IsRememberMeEnabledProvider
+    extends $FunctionalProvider<AsyncValue<bool>, bool, FutureOr<bool>>
+    with $FutureModifier<bool>, $FutureProvider<bool> {
+  /// Remember Me Provider - checks if user has enabled remember me
+  IsRememberMeEnabledProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'isRememberMeEnabledProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$isRememberMeEnabledHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<bool> create(Ref ref) {
+    return isRememberMeEnabled(ref);
+  }
+}
+
+String _$isRememberMeEnabledHash() =>
+    r'87c1239e3d5f2268d9468b2fb32f9b6248fea77b';

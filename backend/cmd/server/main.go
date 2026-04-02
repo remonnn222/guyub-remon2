@@ -13,11 +13,13 @@ import (
 	appAudit "guyub/internal/application/audit"
 	appAuth "guyub/internal/application/auth"
 	appMaster "guyub/internal/application/master"
+	appNotification "guyub/internal/application/notification"
 	appRole "guyub/internal/application/role"
 	appUser "guyub/internal/application/user"
 
 	// Infrastructure layer
 	infraAuth "guyub/internal/infrastructure/auth"
+	infraNotification "guyub/internal/infrastructure/notification"
 	"guyub/internal/infrastructure/persistence/mysql"
 	"guyub/internal/infrastructure/storage"
 
@@ -64,6 +66,12 @@ func main() {
 	passwordService := infraAuth.NewPasswordService()
 	storageService := storage.NewLocalStorage(&cfg.Storage, cfg.App.URL)
 
+	// Initialize FCM client
+	fcmClient, err := infraNotification.NewFCMClient(cfg.Firebase.ServiceAccountPath)
+	if err != nil {
+		logger.Fatalf("Failed to initialize FCM client: %v", err)
+	}
+
 	// Initialize repositories
 	userRepo := mysql.NewUserRepository(db)
 	roleRepo := mysql.NewRoleRepository(db)
@@ -73,6 +81,7 @@ func main() {
 	activityRepo := mysql.NewActivityRepository(db)
 	auditRepo := mysql.NewAuditRepository(db)
 	assetRepo := mysql.NewAssetRepository(db)
+	notificationRepo := mysql.NewNotificationRepository(db)
 
 	// Initialize application services
 	authService := appAuth.NewService(userRepo, activityRepo, assetRepo, storageService, jwtService, passwordService)
@@ -83,6 +92,7 @@ func main() {
 	activityService := appActivity.NewService(activityRepo)
 	auditService := appAudit.NewService(auditRepo)
 	assetService := appAsset.NewService(assetRepo, storageService)
+	notificationService := appNotification.NewService(notificationRepo, userRepo, fcmClient)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(jwtService)
@@ -96,6 +106,7 @@ func main() {
 	activityHandler := handler.NewActivityHandler(activityService)
 	auditHandler := handler.NewAuditHandler(auditService)
 	assetHandler := handler.NewAssetHandler(assetService)
+	notificationHandler := handler.NewNotificationHandler(notificationService)
 
 	// Initialize router
 	r := router.New(
@@ -108,6 +119,7 @@ func main() {
 		activityHandler,
 		auditHandler,
 		assetHandler,
+		notificationHandler,
 		&router.Config{
 			CORSAllowedOrigins: cfg.CORS.AllowedOrigins,
 			CORSAllowedMethods: cfg.CORS.AllowedMethods,

@@ -21,8 +21,12 @@ class ApiClient {
     _dio = Dio(
       BaseOptions(
         baseUrl: baseUrl ?? ApiConstants.baseUrl,
-        connectTimeout: const Duration(milliseconds: ApiConstants.connectTimeout),
-        receiveTimeout: const Duration(milliseconds: ApiConstants.receiveTimeout),
+        connectTimeout: const Duration(
+          milliseconds: ApiConstants.connectTimeout,
+        ),
+        receiveTimeout: const Duration(
+          milliseconds: ApiConstants.receiveTimeout,
+        ),
         sendTimeout: const Duration(milliseconds: ApiConstants.sendTimeout),
         headers: {
           'Content-Type': ApiConstants.contentType,
@@ -145,17 +149,15 @@ class ApiClient {
     Function(int, int)? onSendProgress,
     CancelToken? cancelToken,
   }) async {
-    final formData = FormData.fromMap({
-      ...?data,
-      fieldName: await MultipartFile.fromFile(filePath),
-    });
+    final formDataMap = <String, dynamic>{...?data};
+    formDataMap[fieldName] = await MultipartFile.fromFile(filePath);
+
+    final formData = FormData.fromMap(formDataMap);
 
     return _dio.post<T>(
       path,
       data: formData,
-      options: Options(
-        headers: {'Content-Type': 'multipart/form-data'},
-      ),
+      options: Options(headers: {'Content-Type': 'multipart/form-data'}),
       onSendProgress: onSendProgress,
       cancelToken: cancelToken,
     );
@@ -174,17 +176,15 @@ class ApiClient {
       filePaths.map((path) => MultipartFile.fromFile(path)),
     );
 
-    final formData = FormData.fromMap({
-      ...?data,
-      fieldName: files,
-    });
+    final formDataMap = <String, dynamic>{...?data};
+    formDataMap[fieldName] = files;
+
+    final formData = FormData.fromMap(formDataMap);
 
     return _dio.post<T>(
       path,
       data: formData,
-      options: Options(
-        headers: {'Content-Type': 'multipart/form-data'},
-      ),
+      options: Options(headers: {'Content-Type': 'multipart/form-data'}),
       onSendProgress: onSendProgress,
       cancelToken: cancelToken,
     );

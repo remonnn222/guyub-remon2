@@ -36,7 +36,8 @@ class AuthInterceptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) async {
-    if (err.response?.statusCode == 401 && !_isPublicEndpoint(err.requestOptions.path)) {
+    if (err.response?.statusCode == 401 &&
+        !_isPublicEndpoint(err.requestOptions.path)) {
       // Try to refresh token
       if (!_isRefreshing) {
         _isRefreshing = true;
@@ -49,9 +50,7 @@ class AuthInterceptor extends Interceptor {
               ApiConstants.refresh,
               data: {'refresh_token': refreshToken},
               options: Options(
-                headers: {
-                  'Content-Type': ApiConstants.contentType,
-                },
+                headers: {'Content-Type': ApiConstants.contentType},
               ),
             );
 
@@ -105,9 +104,7 @@ class AuthInterceptor extends Interceptor {
           '${ApiConstants.bearerPrefix} $token';
       try {
         await dio.fetch(request);
-      } catch (_) {
-        // Ignore errors for queued requests
-      }
+      } catch (_) {}
     }
     _pendingRequests.clear();
   }
@@ -226,7 +223,9 @@ class ErrorInterceptor extends Interceptor {
 
       case 401:
         return UnauthorizedException(
-          message: message.isNotEmpty ? message : AppConstants.errorUnauthorized,
+          message: message.isNotEmpty
+              ? message
+              : AppConstants.errorUnauthorized,
           statusCode: statusCode,
         );
 
@@ -264,10 +263,7 @@ class ErrorInterceptor extends Interceptor {
         );
 
       default:
-        return AppException(
-          message: message,
-          statusCode: statusCode,
-        );
+        return AppException(message: message, statusCode: statusCode);
     }
   }
 }
