@@ -95,3 +95,4 @@ docs/**/*.md
 *.bak
 *.tmp
 *.temp
+backend/service-account.json
