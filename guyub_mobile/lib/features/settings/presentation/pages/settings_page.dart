@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../config/theme/app_colors.dart';
 import '../../../../config/theme/app_spacing.dart';
 import '../../../../config/constants/api_constants.dart';
 import '../../../../config/theme/theme_provider.dart';
 import '../../../../core/di/injection_container.dart';
+import '../../../../core/network/api_client.dart';
 import '../../../../core/security/biometric_service.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 
 part 'settings_page.g.dart';
 
@@ -14,6 +17,7 @@ part 'settings_page.g.dart';
 enum Environment {
   local('Lokal', ApiConstants.localUrl),
   androidEmulator('Android Emulator', ApiConstants.androidEmulatorUrl),
+  physicalDevice('Perangkat Fisik', ApiConstants.physicalDeviceUrl),
   production('Produksi', ApiConstants.productionUrl);
 
   final String label;
@@ -48,18 +52,26 @@ class BiometricNotifier extends _$BiometricNotifier {
   }
 
   /// Toggle biometric login
-  /// Note: Biometric can only be disabled from settings.
-  /// Enabling requires going through login flow with credentials.
   Future<void> toggleBiometric(bool enable) async {
     final biometricService = sl<BiometricService>();
+    final currentUser = ref.read(currentUserProvider);
 
-    // Only allow disabling biometric from settings
-    if (!enable) {
+    if (enable) {
+      if (currentUser == null) {
+        throw StateError(
+          'Pengguna tidak tersedia untuk mengaktifkan biometric',
+        );
+      }
+      final success = await biometricService.enableBiometricLogin(
+        email: currentUser.email,
+      );
+      if (!success) {
+        throw StateError('Gagal mengaktifkan login biometric');
+      }
+    } else {
       await biometricService.disableBiometricLogin();
     }
-    // If trying to enable, do nothing - user must go through login flow
 
-    // Refresh the state
     state = AsyncValue.data({
       'isEnabled': await biometricService.isBiometricLoginEnabled,
       'isSupported': await biometricService.isSupported,
@@ -87,25 +99,26 @@ class SettingsPage extends ConsumerWidget {
           Card(
             child: Column(
               children: Environment.values.map((env) {
-                return RadioListTile<Environment>(
-                  value: env,
-                  groupValue: currentEnv,
-                  onChanged: (value) {
-                    if (value != null) {
-                      ref
-                          .read(environmentProvider.notifier)
-                          .setEnvironment(value);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Server diubah ke: ${env.label}'),
-                          action: SnackBarAction(label: 'OK', onPressed: () {}),
-                        ),
-                      );
-                    }
-                  },
+                return ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                   title: Text(env.label),
                   subtitle: Text(env.url, style: const TextStyle(fontSize: 12)),
-                  activeColor: AppColors.primary,
+                  trailing: Icon(
+                    currentEnv == env
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_off,
+                    color: AppColors.primary,
+                  ),
+                  onTap: () {
+                    ref.read(environmentProvider.notifier).setEnvironment(env);
+                    sl<ApiClient>().setBaseUrl(env.url);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Server diubah ke: ${env.label}'),
+                        action: SnackBarAction(label: 'OK', onPressed: () {}),
+                      ),
+                    );
+                  },
                 );
               }).toList(),
             ),
@@ -344,24 +357,34 @@ class SettingsPage extends ConsumerWidget {
                     subtitle: Text(_getBiometricTypeLabel(availableTypes)),
                     value: isEnabled,
                     onChanged: (value) async {
-                      await ref
-                          .read(biometricProvider.notifier)
-                          .toggleBiometric(!value);
+                      try {
+                        await ref
+                            .read(biometricProvider.notifier)
+                            .toggleBiometric(value);
 
-                      if (!context.mounted) return;
+                        if (!context.mounted) return;
 
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            !value
-                                ? 'Login biometrik dinonaktifkan'
-                                : 'Aktifkan login biometrik melalui proses login',
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              value
+                                  ? 'Login biometrik berhasil diaktifkan'
+                                  : 'Login biometrik dinonaktifkan',
+                            ),
+                            backgroundColor: AppColors.success,
                           ),
-                          backgroundColor: AppColors.success,
-                        ),
-                      );
+                        );
+                      } catch (error) {
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(error.toString()),
+                            backgroundColor: AppColors.error,
+                          ),
+                        );
+                      }
                     },
-                    activeColor: AppColors.primary,
+                    activeThumbColor: AppColors.primary,
                   ),
                 ],
               ),
@@ -424,13 +447,23 @@ class SettingsPage extends ConsumerWidget {
             child: const Text('Batal'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              // TODO: Implement cache clearing functionality
-              // This would clear Hive boxes and local storage
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Cache berhasil dihapus')),
-              );
+              try {
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.clear();
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Cache berhasil dihapus')),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Gagal menghapus cache'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
             },
             style: TextButton.styleFrom(foregroundColor: AppColors.danger),
             child: const Text('Hapus'),

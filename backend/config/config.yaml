@@ -6,11 +6,11 @@ app:
   debug: true
 
 database:
-  host: localhost
+  host: mysql
   port: 3306
   database: guyub
-  username: root
-  password: ""
+  username: guyub
+  password: secret
   max_open_conns: 25
   max_idle_conns: 5
   conn_max_lifetime: 5m
@@ -30,6 +30,8 @@ cors:
     - http://localhost:3001
     - http://localhost:3002
     - http://localhost:5173
+    - http://localhost:54000
+    - http://localhost:55019
   allowed_methods:
     - GET
     - POST

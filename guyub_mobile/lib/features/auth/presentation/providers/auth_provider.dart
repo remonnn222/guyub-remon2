@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import '../../../../config/constants/app_constants.dart';
 import '../../../../core/di/injection_container.dart';
@@ -8,6 +9,7 @@ import '../../../../core/storage/secure_storage.dart';
 import '../../../../core/utils/rate_limiter.dart';
 import '../../../../core/services/fcm_token_service.dart';
 import '../../domain/entities/user.dart';
+import '../../domain/repositories/auth_repository.dart';
 import '../../domain/usecases/login_usecase.dart';
 import '../../domain/usecases/logout_usecase.dart';
 import '../../domain/usecases/get_current_user_usecase.dart';
@@ -61,35 +63,38 @@ class AuthNotifier extends _$AuthNotifier {
   }
 
   /// Check and perform biometric auto-login if enabled
-  /// This is called when user is not authenticated but biometric credentials exist
+  /// This is called when user is not authenticated but biometric login is enabled
   Future<void> _checkBiometricAutoLogin() async {
     try {
       final biometricService = sl<BiometricService>();
-      sl<SecureStorageService>();
+      final authRepository = sl<AuthRepository>();
 
-      // Check if biometric login is enabled
       final isBiometricEnabled = await biometricService.isBiometricLoginEnabled;
-
       if (!isBiometricEnabled) {
         state = const AuthState.unauthenticated();
         return;
       }
 
-      // Get biometric credentials (this will prompt biometric verification)
-      final credentials = await biometricService.getBiometricCredentials();
-
-      if (credentials == null) {
-        // Biometric authentication failed
+      final biometricVerified = await biometricService.authenticateBiometricLogin();
+      if (!biometricVerified) {
         state = const AuthState.unauthenticated();
         return;
       }
 
-      final (email, password) = credentials;
-
-      // Try to login with retrieved credentials
-      await login(email, password);
+      final refreshResult = await authRepository.refreshToken();
+      await refreshResult.fold(
+        (failure) async {
+          state = const AuthState.unauthenticated();
+        },
+        (tokens) async {
+          final userResult = await _getCurrentUserUseCase();
+          userResult.fold(
+            (_) => state = const AuthState.unauthenticated(),
+            (user) => state = AuthState.authenticated(user),
+          );
+        },
+      );
     } catch (e) {
-      // On any error, go to unauthenticated state
       state = const AuthState.unauthenticated();
     }
   }
@@ -115,12 +120,14 @@ class AuthNotifier extends _$AuthNotifier {
       (data) {
         final (_, user) = data;
 
-        // Set user identifier for crash reporting
-        FirebaseCrashlytics.instance.setUserIdentifier(user.id.toString());
+        if (Firebase.apps.isNotEmpty) {
+          // Set user identifier for crash reporting
+          FirebaseCrashlytics.instance.setUserIdentifier(user.id.toString());
 
-        // Send FCM token to backend
-        final fcmTokenService = sl<FcmTokenService>();
-        fcmTokenService.sendTokenToBackend(user.id.toString());
+          // Send FCM token to backend
+          final fcmTokenService = sl<FcmTokenService>();
+          fcmTokenService.sendTokenToBackend(user.id.toString());
+        }
 
         // Handle remember me preference
         if (rememberMe) {

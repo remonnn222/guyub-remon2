@@ -10,7 +10,7 @@ class FcmTokenService {
   FcmTokenService._internal();
 
   final Dio _dio = sl<Dio>();
-  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
+  FirebaseMessaging get _firebaseMessaging => FirebaseMessaging.instance;
 
   /// Send FCM token to backend
   Future<void> sendTokenToBackend(String userId) async {

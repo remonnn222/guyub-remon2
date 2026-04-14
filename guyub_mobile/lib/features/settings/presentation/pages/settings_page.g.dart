@@ -95,7 +95,7 @@ final class BiometricNotifierProvider
   BiometricNotifier create() => BiometricNotifier();
 }
 
-String _$biometricNotifierHash() => r'54e23db730d9c8a225b168b3db6322290fc90f39';
+String _$biometricNotifierHash() => r'f0e1c3c0a59e9ace30495a4df479fa664f4012f7';
 
 /// Biometric Settings Notifier
 

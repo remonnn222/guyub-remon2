@@ -30,7 +30,7 @@ class BiometricService {
   final SecureStorageService _storage;
 
   static const String _biometricEnabledKey = 'biometric_enabled';
-  static const String _biometricCredentialsKey = 'biometric_credentials';
+  static const String _biometricUserEmailKey = 'biometric_user_email';
 
   BiometricService({
     LocalAuthentication? localAuth,
@@ -120,12 +120,10 @@ class BiometricService {
     return value == 'true';
   }
 
-  /// Enable biometric login
+  /// Enable biometric login for current user
   Future<bool> enableBiometricLogin({
     required String email,
-    required String password,
   }) async {
-    // First authenticate to confirm identity
     final result = await authenticate(
       reason: 'Verifikasi untuk mengaktifkan login biometrik',
     );
@@ -134,9 +132,8 @@ class BiometricService {
       return false;
     }
 
-    // Store encrypted credentials
     await _storage.write(_biometricEnabledKey, 'true');
-    await _storage.write(_biometricCredentialsKey, '$email:$password');
+    await _storage.write(_biometricUserEmailKey, email);
 
     return true;
   }
@@ -144,29 +141,22 @@ class BiometricService {
   /// Disable biometric login
   Future<void> disableBiometricLogin() async {
     await _storage.delete(_biometricEnabledKey);
-    await _storage.delete(_biometricCredentialsKey);
+    await _storage.delete(_biometricUserEmailKey);
   }
 
-  /// Get stored credentials for biometric login
-  Future<(String email, String password)?> getBiometricCredentials() async {
-    // First verify biometric
+  /// Confirm biometric authentication for login flow
+  Future<bool> authenticateBiometricLogin() async {
     final result = await authenticate(
       reason: 'Masuk dengan biometrik',
       biometricOnly: true,
     );
 
-    if (result != BiometricResult.success) {
-      return null;
-    }
+    return result == BiometricResult.success;
+  }
 
-    // Get stored credentials
-    final credentials = await _storage.read(_biometricCredentialsKey);
-    if (credentials == null) return null;
-
-    final parts = credentials.split(':');
-    if (parts.length != 2) return null;
-
-    return (parts[0], parts[1]);
+  /// Get stored biometric user email
+  Future<String?> getBiometricUserEmail() async {
+    return await _storage.read(_biometricUserEmailKey);
   }
 
   /// Cancel any ongoing authentication

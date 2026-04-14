@@ -39,6 +39,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       final response = await apiClient.post(
         ApiConstants.login,
         data: request.toJson(),
+        options: Options(extra: {'noRetry': true}),
       );
 
       final data = response.data['data'];
@@ -74,6 +75,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       final response = await apiClient.post(
         ApiConstants.refresh,
         data: {'refresh_token': refreshToken},
+        options: Options(extra: {'noRetry': true}),
       );
 
       return AuthTokensModel.fromJson(response.data['data']);
@@ -91,7 +93,10 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   @override
   Future<UserModel> getCurrentUser() async {
     try {
-      final response = await apiClient.get(ApiConstants.me);
+      final response = await apiClient.get(
+        ApiConstants.me,
+        options: Options(extra: {'noRetry': true}),
+      );
       return UserModel.fromJson(response.data['data']);
     } on DioException catch (e) {
       if (e.error is AppException) {

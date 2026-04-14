@@ -67,9 +67,13 @@ func main() {
 	storageService := storage.NewLocalStorage(&cfg.Storage, cfg.App.URL)
 
 	// Initialize FCM client
-	fcmClient, err := infraNotification.NewFCMClient(cfg.Firebase.ServiceAccountPath)
+	var fcmClient appNotification.FCMClient
+	fcmClientImpl, err := infraNotification.NewFCMClient(cfg.Firebase.ServiceAccountPath)
 	if err != nil {
-		logger.Fatalf("Failed to initialize FCM client: %v", err)
+		logger.Warnf("Failed to initialize FCM client: %v, using no-op client for development", err)
+		fcmClient = infraNotification.NewNoOpFCMClient()
+	} else {
+		fcmClient = fcmClientImpl
 	}
 
 	// Initialize repositories

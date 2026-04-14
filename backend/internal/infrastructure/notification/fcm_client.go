@@ -119,3 +119,22 @@ func convertPriority(priority string) string {
 		return "normal"
 	}
 }
+
+// NoOpFCMClient is a no-operation FCM client for development/testing
+type NoOpFCMClient struct{}
+
+// NewNoOpFCMClient creates a new no-operation FCM client
+func NewNoOpFCMClient() *NoOpFCMClient {
+	return &NoOpFCMClient{}
+}
+
+// SendMessage simulates sending a message (no-op)
+func (n *NoOpFCMClient) SendMessage(ctx context.Context, message *notification.FCMMessage) (*notification.FCMResponse, error) {
+	// Return a mock successful response
+	return &notification.FCMResponse{
+		Name: "projects/mock/messages/mock-id",
+		Message: notification.FCMResponseMessage{
+			Name: "projects/mock/messages/mock-id",
+		},
+	}, nil
+}
