@@ -155,7 +155,7 @@ func setDefaults() {
 	viper.SetDefault("storage.path", "./storage/uploads")
 
 	// CORS defaults
-	viper.SetDefault("cors.allowed_origins", []string{"http://localhost:3000", "http://localhost:5173"})
+	viper.SetDefault("cors.allowed_origins", []string{"http://localhost:3000", "http://localhost:5173", "http://localhost:54000", "http://localhost:55019"})
 	viper.SetDefault("cors.allowed_methods", []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"})
 	viper.SetDefault("cors.allowed_headers", []string{"Authorization", "Content-Type"})
 

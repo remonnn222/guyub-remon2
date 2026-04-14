@@ -88,6 +88,11 @@ class RetryInterceptor extends Interceptor {
   }
 
   bool _shouldRetry(DioException err, int retryCount) {
+    final noRetry = err.requestOptions.extra['noRetry'] == true;
+    if (noRetry) {
+      return false;
+    }
+
     // Check max retries
     if (retryCount >= config.maxRetries) {
       return false;
@@ -148,21 +153,18 @@ class RequestQueue {
   StreamSubscription<bool>? _connectivitySubscription;
   bool _isProcessing = false;
 
-  RequestQueue({
-    required this.dio,
-    required this.networkInfo,
-  }) {
+  RequestQueue({required this.dio, required this.networkInfo}) {
     _startListening();
   }
 
   void _startListening() {
-    _connectivitySubscription = networkInfo.onConnectivityChanged.listen(
-      (isConnected) {
-        if (isConnected && _queue.isNotEmpty && !_isProcessing) {
-          _processQueue();
-        }
-      },
-    );
+    _connectivitySubscription = networkInfo.onConnectivityChanged.listen((
+      isConnected,
+    ) {
+      if (isConnected && _queue.isNotEmpty && !_isProcessing) {
+        _processQueue();
+      }
+    });
   }
 
   /// Add request to queue
@@ -228,8 +230,5 @@ class _QueuedRequest {
   final RequestOptions options;
   final Completer<Response?> completer;
 
-  _QueuedRequest({
-    required this.options,
-    required this.completer,
-  });
+  _QueuedRequest({required this.options, required this.completer});
 }

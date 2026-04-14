@@ -47,7 +47,7 @@ final class AuthNotifierProvider
   }
 }
 
-String _$authNotifierHash() => r'5a1b935295b19a7179570c396d508cf3994f6a7a';
+String _$authNotifierHash() => r'49712358290f18a566f3ca21fc88bbb1539f91ab';
 
 /// Auth State Notifier
 /// Manages authentication state using Riverpod

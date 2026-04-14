@@ -3,11 +3,11 @@ class ApiConstants {
   ApiConstants._();
 
   // Base URL - Change based on environment
-  static const String baseUrl = 'http://localhost:8080/api/v1';
-
+  static const String baseUrl = 'http://192.168.1.100:8080/api/v1';
   // Alternative URLs
   static const String localUrl = 'http://localhost:8080/api/v1';
   static const String androidEmulatorUrl = 'http://10.0.2.2:8080/api/v1';
+  static const String physicalDeviceUrl = 'http://192.168.2.164:8080/api/v1';
   static const String productionUrl = 'https://api.guyub.id/api/v1';
 
   // Timeouts (in milliseconds)

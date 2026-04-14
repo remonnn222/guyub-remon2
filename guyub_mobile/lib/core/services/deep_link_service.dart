@@ -88,8 +88,8 @@ class DeepLinkService {
     }
   }
 
-  /// Show join family dialog
-  void _showJoinFamilyDialog(BuildContext context, String inviteCode) {
+  /// Show join family dialog (public method for routing)
+  void showJoinFamilyDialog(BuildContext context, String inviteCode) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -112,6 +112,11 @@ class DeepLinkService {
         ],
       ),
     );
+  }
+
+  /// Show join family dialog
+  void _showJoinFamilyDialog(BuildContext context, String inviteCode) {
+    showJoinFamilyDialog(context, inviteCode);
   }
 
   /// Join family logic

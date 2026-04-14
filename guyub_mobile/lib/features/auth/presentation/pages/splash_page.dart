@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -63,38 +63,88 @@ class _SplashPageState extends ConsumerState<SplashPage>
 
     if (!mounted) return;
 
+    final router = GoRouter.of(context);
+
     // Check if onboarding is completed
     final prefs = await SharedPreferences.getInstance();
     final isOnboardingCompleted =
         prefs.getBool(AppConstants.keyOnboardingComplete) ?? false;
 
     if (!isOnboardingCompleted) {
-      context.go(RouteNames.onboarding);
+      router.go(RouteNames.onboarding);
       return;
     }
 
-    // Check auth state and navigate
     final authState = ref.read(authProvider);
-
     switch (authState) {
       case AuthStateInitial():
       case AuthStateLoading():
-        // Still checking/loading - wait for state change
-        break;
+      case AuthStateUnauthenticated():
+      case AuthStateError():
+        router.go('/login');
+        return;
       case AuthStateAuthenticated():
-        // Check for pending deep link
         final deepLinkService = sl<DeepLinkService>();
         if (deepLinkService.hasPendingDeepLink()) {
           final pendingLink = deepLinkService.getAndClearPendingDeepLink();
           if (pendingLink != null) {
-            deepLinkService.navigateToDeepLink(context, pendingLink);
+            _navigatePendingDeepLink(router, pendingLink);
             return;
           }
         }
-        context.go('/dashboard');
+        router.go('/dashboard');
+        return;
+    }
+  }
+
+  void _navigatePendingDeepLink(GoRouter router, Uri uri) {
+    final path = uri.path;
+    if (path.startsWith('/family/')) {
+      final inviteCode = path.split('/').last;
+      if (inviteCode.isNotEmpty) {
+        router.go('/family/$inviteCode');
+        return;
+      }
+    }
+
+    if (path.startsWith('/event/')) {
+      final eventId = path.split('/').last;
+      if (eventId.isNotEmpty) {
+        router.go('/event/$eventId');
+        return;
+      }
+    }
+
+    if (path == '/login') {
+      router.go('/login');
+      return;
+    }
+
+    router.go('/dashboard');
+  }
+
+  void _handleAuthState(BuildContext currentContext, AuthState authState) {
+    switch (authState) {
+      case AuthStateInitial():
+      case AuthStateLoading():
+        return;
+      case AuthStateAuthenticated():
+        final deepLinkService = sl<DeepLinkService>();
+        if (deepLinkService.hasPendingDeepLink()) {
+          final pendingLink = deepLinkService.getAndClearPendingDeepLink();
+          if (pendingLink != null) {
+            deepLinkService.navigateToDeepLink(currentContext, pendingLink);
+            return;
+          }
+        }
+        if (!mounted) return;
+        GoRouter.of(currentContext).go('/dashboard');
+        return;
       case AuthStateUnauthenticated():
       case AuthStateError():
-        context.go('/login');
+        if (!mounted) return;
+        GoRouter.of(currentContext).go('/login');
+        return;
     }
   }
 
@@ -106,29 +156,11 @@ class _SplashPageState extends ConsumerState<SplashPage>
 
   @override
   Widget build(BuildContext context) {
+    final currentContext = context;
+
     // Listen to auth state changes
     ref.listen(authProvider, (previous, next) {
-      switch (next) {
-        case AuthStateInitial():
-        case AuthStateLoading():
-          break;
-        case AuthStateAuthenticated():
-          // Check for pending deep link
-          final deepLinkService = sl<DeepLinkService>();
-          if (deepLinkService.hasPendingDeepLink()) {
-            final pendingLink = deepLinkService.getAndClearPendingDeepLink();
-            if (pendingLink != null) {
-              deepLinkService.navigateToDeepLink(context, pendingLink);
-              return;
-            }
-          }
-          if (mounted) {
-            context.go('/dashboard');
-          }
-        case AuthStateUnauthenticated():
-        case AuthStateError():
-          context.go('/login');
-      }
+      _handleAuthState(currentContext, next);
     });
 
     return Scaffold(

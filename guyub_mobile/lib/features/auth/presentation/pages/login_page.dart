@@ -369,19 +369,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   /// Show dialog to enable biometric login after successful login
   Future<void> _showEnableBiometricDialog(String email) async {
-    // Don't show dialog if biometric is already enabled
     final biometricService = sl<BiometricService>();
     final isEnabled = await biometricService.isBiometricLoginEnabled;
 
     if (isEnabled || !mounted) return;
 
-    // Check if device supports biometric
     final isSupported = await biometricService.isSupported;
     final isEnrolled = await biometricService.isEnrolled;
 
     if (!isSupported || !isEnrolled || !mounted) return;
 
-    showDialog(
+    final shouldEnable = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Aktifkan Login Biometrik?'),
@@ -390,43 +388,36 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(context, false),
             child: const Text('Nanti'),
           ),
           TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-
-              // Enable biometric login
-              final success = await biometricService.enableBiometricLogin(
-                email: email,
-                password: _passwordController.text,
-              );
-
-              if (!mounted) return;
-
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    success
-                        ? 'Login biometrik berhasil diaktifkan'
-                        : 'Gagal mengaktifkan login biometrik',
-                  ),
-                  backgroundColor: success
-                      ? AppColors.success
-                      : AppColors.error,
-                ),
-              );
-
-              // Clear password field for security
-              _passwordController.clear();
-            },
+            onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: AppColors.primary),
             child: const Text('Aktifkan'),
           ),
         ],
       ),
     );
+
+    if (shouldEnable != true || !mounted) return;
+
+    final success = await biometricService.enableBiometricLogin(email: email);
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          success
+              ? 'Login biometrik berhasil diaktifkan'
+              : 'Gagal mengaktifkan login biometrik',
+        ),
+        backgroundColor: success ? AppColors.success : AppColors.error,
+      ),
+    );
+
+    _passwordController.clear();
   }
 
   Widget _buildErrorMessage(String error) {
@@ -455,10 +446,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Widget _buildFooter() {
     return Column(
       children: [
-        // Forgot Password
         TextButton(
           onPressed: () {
-            // TODO: Navigate to forgot password
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Fitur lupa password belum tersedia.'),
+              ),
+            );
           },
           child: Text(
             'Lupa Password?',
@@ -466,7 +461,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           ),
         ),
         AppSpacing.height16,
-        // Version Info
         Text('Guyub v1.0.0', style: AppTypography.caption),
       ],
     );

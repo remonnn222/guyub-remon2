@@ -78,7 +78,7 @@ class ImageService {
       );
 
       if (result == null) break;
-      compressedFile = result;
+      compressedFile = File(result.path);
 
       final newSize = await compressedFile.length();
       if (newSize <= maxBytes) {

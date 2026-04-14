@@ -215,11 +215,15 @@ guyub_mobile/
    Edit `lib/config/constants/api_constants.dart`:
    ```dart
    class ApiConstants {
-     // Local development
+     // Local development (simulator / emulator)
      static const String localUrl = 'http://localhost:8080/api/v1';
 
      // Android Emulator (10.0.2.2 maps to host localhost)
      static const String androidEmulatorUrl = 'http://10.0.2.2:8080/api/v1';
+
+     // Physical device: use your computer's local network IP, e.g.
+     // http://192.168.1.100:8080/api/v1
+     static const String physicalDeviceUrl = 'http://192.168.1.100:8080/api/v1';
 
      // Production
      static const String productionUrl = 'https://api.guyub.id/api/v1';

@@ -127,15 +127,9 @@ class AuthRepositoryImpl implements AuthRepository {
       await secureStorage.clearAuthData();
       return Left(AuthFailure(message: e.message, statusCode: e.statusCode));
     } on AppException catch (e) {
-      // Return cached user if available
-      if (cachedUser != null) {
-        return Right(UserModel.fromJson(cachedUser));
-      }
+      // If the network is available, don't silently accept stale cache.
       return Left(ServerFailure(message: e.message, statusCode: e.statusCode));
     } catch (e) {
-      if (cachedUser != null) {
-        return Right(UserModel.fromJson(cachedUser));
-      }
       return Left(ServerFailure(message: e.toString()));
     }
   }

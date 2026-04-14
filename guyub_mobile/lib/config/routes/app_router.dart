@@ -10,6 +10,7 @@ import '../../features/dashboard/presentation/pages/dashboard_page.dart';
 import '../../features/family/presentation/pages/family_list_page.dart';
 import '../../features/family/presentation/pages/family_tree_page.dart';
 import '../../features/event/presentation/pages/events_list_page.dart';
+import '../../features/event/presentation/pages/event_detail_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/profile/presentation/pages/edit_profile_page.dart';
 import '../../features/profile/presentation/pages/change_password_page.dart';
@@ -174,8 +175,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'deep-link-family',
         builder: (context, state) {
           final inviteCode = state.pathParameters['inviteCode']!;
-          // TODO: Navigate to family tree or join family dialog
-          return _PlaceholderPage(title: 'Family Invite: $inviteCode');
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            sl<DeepLinkService>().showJoinFamilyDialog(context, inviteCode);
+          });
+          return const DashboardPage();
         },
       ),
 
@@ -183,8 +186,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/event/:eventId',
         name: 'deep-link-event',
         builder: (context, state) {
-          final eventId = state.pathParameters['eventId']!;
-          return _PlaceholderPage(title: 'Event Detail: $eventId');
+          final eventId = int.tryParse(state.pathParameters['eventId'] ?? '') ?? 0;
+          return EventDetailPage(eventId: eventId);
         },
       ),
 
@@ -193,11 +196,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'deep-link-invite',
         builder: (context, state) {
           final inviteCode = state.pathParameters['inviteCode']!;
-          // Show join family dialog
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            _showJoinFamilyDialog(context, inviteCode);
+            sl<DeepLinkService>().showJoinFamilyDialog(context, inviteCode);
           });
-          return const DashboardPage(); // Return dashboard as base page
+          return const DashboardPage();
         },
       ),
     ],
@@ -227,37 +229,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ),
   );
 });
-
-/// Show join family dialog for deep link
-void _showJoinFamilyDialog(BuildContext context, String inviteCode) {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Bergabung ke Keluarga'),
-      content: Text(
-        'Apakah Anda ingin bergabung ke keluarga dengan kode undangan: $inviteCode?',
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Batal'),
-        ),
-        TextButton(
-          onPressed: () {
-            Navigator.pop(context);
-            // TODO: Implement join family logic
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Fitur bergabung keluarga akan segera hadir'),
-              ),
-            );
-          },
-          child: const Text('Bergabung'),
-        ),
-      ],
-    ),
-  );
-}
 
 /// Placeholder page for routes not yet implemented
 class _PlaceholderPage extends StatelessWidget {

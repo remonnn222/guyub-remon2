@@ -20,6 +20,8 @@ class ErrorHandler {
     ),
   );
 
+  static bool crashlyticsEnabled = false;
+
   /// Initialize error handling
   static void init() {
     // Catch Flutter errors
@@ -40,8 +42,15 @@ class ErrorHandler {
     if (kDebugMode) {
       _logger.e('[$context]', error: error, stackTrace: stack);
     }
-    // Send to crash reporting service
-    FirebaseCrashlytics.instance.recordError(error, stack);
+
+    // Send to crash reporting service only if Crashlytics has been enabled.
+    if (!crashlyticsEnabled) return;
+
+    try {
+      FirebaseCrashlytics.instance.recordError(error, stack);
+    } catch (_) {
+      // Ignore crash reporting failures during startup.
+    }
   }
 
   /// Handle exception and return appropriate failure

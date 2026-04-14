@@ -239,18 +239,23 @@ func assignRolePermissions(ctx context.Context, db *gorm.DB) error {
 }
 
 func seedAdminUser(ctx context.Context, db *gorm.DB) error {
-	// Check if admin user exists
-	var existingUser user.User
-	if err := db.Where("email = ?", "admin@guyub.id").First(&existingUser).Error; err == nil {
-		logger.Info("Admin user already exists")
-		return nil
-	}
-
 	// Hash password
 	passwordService := infraAuth.NewPasswordService()
 	hashedPassword, err := passwordService.Hash("Admin@123")
 	if err != nil {
 		return err
+	}
+
+	// Check if admin user exists
+	var existingUser user.User
+	if err := db.Where("email = ?", "admin@guyub.id").First(&existingUser).Error; err == nil {
+		logger.Info("Admin user already exists, updating password and status")
+		existingUser.Password = hashedPassword
+		existingUser.Status = user.StatusActive
+		if err := db.Save(&existingUser).Error; err != nil {
+			return err
+		}
+		return nil
 	}
 
 	// Create admin user

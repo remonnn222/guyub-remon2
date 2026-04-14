@@ -1,6 +1,8 @@
 package router
 
 import (
+	"strings"
+
 	"guyub/internal/presentation/http/handler"
 	"guyub/internal/presentation/http/middleware"
 
@@ -51,10 +53,14 @@ func New(
 
 	// CORS
 	engine.Use(cors.New(cors.Config{
-		AllowOrigins:     cfg.CORSAllowedOrigins,
+		AllowOrigins:     []string{},
 		AllowMethods:     cfg.CORSAllowedMethods,
-		AllowHeaders:     cfg.CORSAllowedHeaders,
+		AllowHeaders:     append(cfg.CORSAllowedHeaders, "Origin", "Accept"),
 		AllowCredentials: true,
+		AllowOriginFunc: func(origin string) bool {
+			return strings.HasPrefix(origin, "http://localhost:") || strings.HasPrefix(origin, "https://localhost:") ||
+				strings.HasPrefix(origin, "http://127.0.0.1:") || strings.HasPrefix(origin, "https://127.0.0.1:")
+		},
 	}))
 
 	return &Router{
@@ -77,6 +83,9 @@ func (r *Router) Setup() *gin.Engine {
 	// Health check
 	r.engine.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
+	})
+	r.engine.HEAD("/health", func(c *gin.Context) {
+		c.Status(200)
 	})
 
 	// API v1
